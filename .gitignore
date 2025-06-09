@@ -1,0 +1,19 @@
+node_modules
+
+dist
+
+/.cache
+/build
+/.wrangler
+.env
+.DS_Store
+
+*storybook.log
+storybook-static
+
+coverage/
+
+# Playground
+playground/node_modules/
+playground/dist/
+playground/.vite/

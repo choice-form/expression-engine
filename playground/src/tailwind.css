@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@import "@choiceform/design-system/styles/theme.css";
+@import "@choiceform/design-system/styles/components.css";
+
+@source "../../node_modules/@choiceform/design-system";

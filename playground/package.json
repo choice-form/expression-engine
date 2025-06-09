@@ -1,0 +1,38 @@
+{
+  "name": "expression-engine-playground",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@choiceform/expression-engine": "file:../",
+    "@codemirror/autocomplete": "^6.18.6",
+    "@codemirror/basic-setup": "^0.20.0",
+    "@codemirror/lang-javascript": "^6.2.1",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/lint": "^6.8.5",
+    "@codemirror/state": "^6.4.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.23.0",
+    "@tailwindcss/vite": "^4.1.8",
+    "codemirror": "^6.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.6.2",
+    "tailwindcss": "^4.1.8"
+  },
+  "devDependencies": {
+    "@choiceform/design-system": "^0.7.8",
+    "@choiceform/icons-react": "^1.1.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/react-router-dom": "^5.3.3",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
+  }
+}
