@@ -48,7 +48,7 @@ export const Header = memo(function Header(props: HeaderProps) {
 
   return (
     <header className="bg-default-background sticky top-0 z-10 border-b">
-      <div className="mx-auto px-4">
+      <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex-shrink-0 text-lg font-medium">

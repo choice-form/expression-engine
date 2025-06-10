@@ -1,29 +1,8 @@
-import { defaultHighlightStyle, syntaxHighlighting, HighlightStyle } from "@codemirror/language"
+import { type ValidationResult } from "@choiceform/expression-engine"
+import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
+import { StateEffect, StateField } from "@codemirror/state"
 import { oneDark } from "@codemirror/theme-one-dark"
-import { EditorView } from "@codemirror/view"
-
-// 尝试导入语法标签
-let tags: any
-try {
-  // 尝试从 @codemirror/language 导入
-  const langModule = require("@codemirror/language")
-  tags = langModule.tags || {}
-} catch {
-  // 如果失败，创建基本的标签映射
-  tags = {
-    keyword: "keyword",
-    string: "string",
-    number: "number",
-    comment: "comment",
-    operator: "operator",
-    bracket: "bracket",
-    property: "property",
-    variable: "variable",
-    variableName: "variableName",
-    literal: "literal",
-    punctuation: "punctuation",
-  }
-}
+import { Decoration, DecorationSet, EditorView } from "@codemirror/view"
 
 /**
  * 自定义basicSetup，排除行号和折叠功能
@@ -129,7 +108,7 @@ export const getCodeMirrorTheme = (theme: "light" | "dark") => {
 export const getEditorStyles = (theme: "light" | "dark") => {
   return EditorView.theme({
     "&": {
-      fontSize: "var(--text-md)",
+      fontSize: "var(--text-lg)",
     },
     ".cm-focused": {
       outline: "none",
@@ -193,6 +172,139 @@ export const getBorderColor = (theme: "light" | "dark", isValid: boolean) => {
   return isValid ? (theme === "dark" ? "#374151" : "#d1d5db") : "#ef4444"
 }
 
+// ValidationEngine实例（保留用于未来功能）
+// const validationEngine = createDefaultValidationEngine()
+
+// 更新验证装饰器的Effect
+export const updateValidationEffect = StateEffect.define<{
+  template: string
+  validation?: any // 使用any类型以兼容playground的validation格式
+}>()
+
+// 验证装饰器状态字段
+export const validationField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none
+  },
+  update(decorations, tr) {
+    decorations = decorations.map(tr.changes)
+
+    for (let effect of tr.effects) {
+      if (effect.is(updateValidationEffect)) {
+        const { template, validation } = effect.value
+        const docLength = tr.state.doc.length // 获取文档实际长度
+
+        // 安全位置检查函数
+        const safeRange = (start: number, end: number) => {
+          const safeStart = Math.max(0, Math.min(start, docLength))
+          const safeEnd = Math.max(safeStart, Math.min(end, docLength))
+          return { from: safeStart, to: safeEnd }
+        }
+
+        try {
+          // 转换playground的validation格式为ValidationResult格式
+          let convertedValidation: ValidationResult | undefined = undefined
+          if (validation) {
+            convertedValidation = {
+              isValid: validation.isValid,
+              errors: (validation.errors || []).map((err: any) => ({
+                code: "CUSTOM_ERROR",
+                message: err.message,
+                severity: "error" as const,
+                position: err.position || { start: 0, end: template.length, line: 1, column: 1 },
+              })),
+              warnings: (validation.warnings || []).map((warn: any) => ({
+                code: "CUSTOM_WARNING",
+                message: warn.message,
+                severity: "warning" as const,
+                position: warn.position || { start: 0, end: template.length, line: 1, column: 1 },
+              })),
+            }
+          }
+
+          // 表达式高亮 - 基于 ValidationEngine 的结果
+          const marks = []
+
+          // 1. 找到所有表达式位置
+          const expressionRegex = /\{\{([\s\S]*?)\}\}/g
+          let match: RegExpExecArray | null
+
+          while ((match = expressionRegex.exec(template)) !== null) {
+            const exprStart = match.index
+            const exprEnd = match.index + match[0].length
+            const { from: safeFrom, to: safeTo } = safeRange(exprStart, exprEnd)
+
+            if (safeFrom < safeTo) {
+              // 检查这个表达式是否有错误
+              const hasError = convertedValidation?.errors?.some(
+                (error) =>
+                  error.position &&
+                  !(error.position.end <= exprStart || error.position.start >= exprEnd), // 位置重叠检测
+              )
+
+              // 检查是否有警告
+              const hasWarning = convertedValidation?.warnings?.some(
+                (warning) =>
+                  warning.position &&
+                  !(warning.position.end <= exprStart || warning.position.start >= exprEnd), // 位置重叠检测
+              )
+
+              // 根据验证结果决定样式
+              let cssClass = "expression-valid" // 默认绿色
+              if (hasError) {
+                cssClass = "expression-error" // 红色
+              } else if (hasWarning) {
+                cssClass = "expression-warning" // 黄色
+              }
+
+              marks.push(Decoration.mark({ class: cssClass }).range(safeFrom, safeTo))
+            }
+          }
+
+          // 2. 检查不完整的表达式（只有 {{ 没有对应的 }}）
+          const incompleteRegex = /\{\{(?![\s\S]*?\}\})/g
+          let incompleteMatch: RegExpExecArray | null
+
+          while ((incompleteMatch = incompleteRegex.exec(template)) !== null) {
+            // 找到不完整表达式的结束位置
+            let endPos = incompleteMatch.index + 2
+
+            for (let i = incompleteMatch.index + 2; i < template.length; i++) {
+              const char = template[i]
+              if (/[\u4e00-\u9fff\n\r]/.test(char) || template.substring(i, i + 2) === "{{") {
+                endPos = i
+                break
+              }
+              endPos = i + 1
+            }
+
+            const { from: safeFrom, to: safeTo } = safeRange(incompleteMatch.index, endPos)
+            if (safeFrom < safeTo) {
+              marks.push(Decoration.mark({ class: "expression-error" }).range(safeFrom, safeTo))
+            }
+          }
+
+          decorations = Decoration.set(marks)
+        } catch {
+          // 解析失败，整体标记为错误
+          const { from: safeFrom, to: safeTo } = safeRange(0, template.length)
+
+          if (safeFrom < safeTo) {
+            decorations = Decoration.set([
+              Decoration.mark({ class: "expression-error" }).range(safeFrom, safeTo),
+            ])
+          } else {
+            decorations = Decoration.none
+          }
+        }
+      }
+    }
+
+    return decorations
+  },
+  provide: (f) => EditorView.decorations.from(f),
+})
+
 /**
  * 获取验证状态主题
  * @param theme 主题类型
@@ -200,10 +312,8 @@ export const getBorderColor = (theme: "light" | "dark", isValid: boolean) => {
  * @returns 验证状态主题扩展
  */
 export const getValidationTheme = (_theme: "light" | "dark", _isValid?: boolean) => {
-  // 完全移除验证状态的颜色覆盖，让语法高亮正常显示
-  // 错误标记通过 linter 系统精确处理，不需要全局颜色改变
+  // 装饰器样式已在CSS中定义，这里只提供诊断样式
   return EditorView.theme({
-    // 只保留一些基础的验证相关样式，不覆盖文本颜色
     ".cm-diagnostic-error": {
       textDecoration: "underline wavy",
       textDecorationColor: "#dc2626",
@@ -224,20 +334,21 @@ export const createEditorExtensions = (options: {
   theme: "light" | "dark"
   language?: any | null
   additionalExtensions?: any[]
-  isValid?: boolean
 }) => {
-  const { theme, language, additionalExtensions = [], isValid } = options
+  const { theme, language, additionalExtensions = [] } = options
 
   return [
-    // 语法高亮（仅基础，不包含语言特定规则）
+    // 语法高亮（基础）
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     // 主题（包含语法高亮颜色）
     getCodeMirrorTheme(theme),
     // 编辑器样式
     getEditorStyles(theme),
-    // 验证状态颜色
-    getValidationTheme(theme, isValid),
-    // 语言支持（仅在提供时使用，避免与Expression Engine验证冲突）
+    // 验证装饰器字段
+    validationField,
+    // 验证状态主题
+    getValidationTheme(theme),
+    // 语言支持
     ...(language ? [language] : []),
     // 其他扩展
     ...additionalExtensions,

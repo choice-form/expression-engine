@@ -1,120 +1,29 @@
-import React, { useState, useCallback, useMemo } from "react"
+import React, { useState, useMemo, useCallback } from "react"
 import {
   ExpressionEngine,
   ContextManager,
   createDefaultValidationEngine,
 } from "@choiceform/expression-engine"
+import { Button, Segmented } from "@choiceform/design-system"
 import ExpressionEditor from "./expression-editor"
-import JsonEditor from "./json-editor"
-import VarsEditor from "./vars-editor"
 import ResultPanel from "./result-panel"
 import ValidationPanel from "./validation-panel"
-import { Button } from "@choiceform/design-system"
+import JsonEditor from "./json-editor"
+import VarsEditor from "./vars-editor"
 import { useTheme } from "../hooks"
+import { DEMO_EXAMPLES, type DemoExample } from "../constants/demos"
 
 const ExpressionPlayground = () => {
   const { theme } = useTheme()
 
-  // 状态管理
-  const [expression, setExpression] = useState(
-    '{{ $json.user.name }}，{{ $json.user.age >= 18 ? "成年人" : "未成年" }}，在{{ $json.company.city }}工作',
-  )
-  const [jsonData, setJsonData] = useState(`{
-  "user": {
-    "name": "张三",
-    "age": 28,
-    "email": "zhangsan@example.com",
-    "skills": ["JavaScript", "TypeScript", "React", "Node.js"],
-    "isActive": true,
-    "joinDate": "2023-06-15"
-  },
-  "company": {
-    "name": "科技公司",
-    "city": "北京",
-    "employees": 150
-  },
-  "projects": [
-    {
-      "name": "项目A",
-      "status": "completed",
-      "budget": 100000,
-      "startDate": "2024-01-01"
-    },
-    {
-      "name": "项目B", 
-      "status": "in-progress",
-      "budget": 250000,
-      "startDate": "2024-03-15"
-    }
-  ],
-  "statistics": {
-    "totalRevenue": 500000,
-    "growth": 0.15,
-    "regions": ["北京", "上海", "深圳", "广州"]
-  }
-}`)
-  const [varsData, setVarsData] = useState(`{
-  "threshold": {
-    "revenue": 1000000,
-    "growth": 0.1,
-    "employees": 200
-  },
-  "settings": {
-    "dateFormat": "yyyy-MM-dd",
-    "currency": "CNY",
-    "timezone": "Asia/Shanghai"
-  },
-  "constants": {
-    "taxRate": 0.25,
-    "maxBudget": 500000,
-    "workingDays": 250
-  }
-}`)
-  const [outputFormat, setOutputFormat] = useState<"string" | "ast">("string")
+  // 当前选中的演示
+  const [currentDemo, setCurrentDemo] = useState<DemoExample>(DEMO_EXAMPLES[0]!)
 
-  // 预设表达式样例
-  const examples = [
-    {
-      title: "🧑 基础变量访问",
-      expression:
-        '{{ $json.user.name }}，{{ $json.user.age >= 18 ? "成年人" : "未成年" }}，在{{ $json.company.city }}工作',
-    },
-    {
-      title: "📊 数学计算与格式化",
-      expression:
-        "总预算：¥{{ $json.projects.map(p => p.budget).reduce((a, b) => a + b) / 10000 }}万元",
-    },
-    {
-      title: "📅 日期时间处理",
-      expression:
-        '今天是{{ $now.toFormat("yyyy年MM月dd日") }}，项目A开始于{{ DateTime.fromISO($json.projects[0].startDate).toFormat("yyyy年MM月dd日") }}',
-    },
-    {
-      title: "🔢 数组操作与条件",
-      expression:
-        '技能：{{ $json.user.skills.join("、") }}，共{{ $json.user.skills.length }}项{{ $json.user.skills.length >= 4 ? "（技能丰富）" : "" }}',
-    },
-    {
-      title: "💰 财务计算",
-      expression:
-        '营收{{ $json.statistics.totalRevenue >= $vars.threshold.revenue ? "达标" : "未达标" }}，增长率{{ Math.round($json.statistics.growth * 100) }}%',
-    },
-    {
-      title: "🔍 JMESPath 查询",
-      expression:
-        '进行中项目：{{ jmespath($json, "projects[?status == `in-progress`].name").join("、") }}',
-    },
-    {
-      title: "📈 复杂业务逻辑",
-      expression:
-        '{{ $if($json.statistics.growth > $vars.threshold.growth, "增长良好", "需要改进") }}，{{ $if($json.company.employees >= $vars.threshold.employees, "规模较大", "小型企业") }}',
-    },
-    {
-      title: "🌏 地理与文本",
-      expression:
-        '业务覆盖{{ $json.statistics.regions.length }}个城市：{{ $json.statistics.regions.slice(0, 2).join("、") }}等',
-    },
-  ]
+  // 状态管理
+  const [expression, setExpression] = useState(currentDemo.expression)
+  const [jsonData, setJsonData] = useState(currentDemo.jsonData)
+  const [varsData, setVarsData] = useState(currentDemo.varsData)
+  const [outputFormat, setOutputFormat] = useState<"string" | "ast">("string")
 
   // 创建引擎实例 - 使用 useMemo 避免重复创建
   const engine = useMemo(() => new ExpressionEngine(), [])
@@ -146,6 +55,14 @@ const ExpressionPlayground = () => {
       node: { id: "playground", type: "test" },
     })
   }, [contextManager, jsonParsed, varsParsed])
+
+  // 切换演示
+  const switchDemo = useCallback((demo: DemoExample) => {
+    setCurrentDemo(demo)
+    setExpression(demo.expression)
+    setJsonData(demo.jsonData)
+    setVarsData(demo.varsData)
+  }, [])
 
   // 执行表达式
   const result = useMemo(() => {
@@ -184,7 +101,7 @@ const ExpressionPlayground = () => {
     }
   }, [expression, outputFormat, engine, context])
 
-  // 验证结果状态 - 使用 any 类型简化处理
+  // 验证结果状态
   const [validation, setValidation] = useState<any>({
     isValid: true,
     errors: [],
@@ -192,7 +109,7 @@ const ExpressionPlayground = () => {
     metadata: { totalChecks: 0, executionTime: 0, layers: [] },
   })
 
-  // 验证表达式函数 - 使用 useCallback 稳定引用
+  // 验证表达式函数
   const validateExpression = useCallback(async () => {
     if (!expression.trim()) {
       return {
@@ -237,7 +154,7 @@ const ExpressionPlayground = () => {
     }
   }, [expression, validator, context])
 
-  // 当表达式、上下文变化时更新验证结果 - 只依赖必要的值
+  // 当表达式、上下文变化时更新验证结果
   React.useEffect(() => {
     let isCancelled = false
 
@@ -250,7 +167,7 @@ const ExpressionPlayground = () => {
     return () => {
       isCancelled = true
     }
-  }, [expression, jsonData, varsData]) // 只依赖这三个直接输入的值
+  }, [expression, jsonData, varsData])
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
@@ -262,25 +179,35 @@ const ExpressionPlayground = () => {
           Click to experience the expression engine, support AST output
         </p>
         <div className="flex flex-wrap gap-4">
-          {examples.map((example, index) => (
+          {DEMO_EXAMPLES.map((demo, index) => (
             <Button
               key={index}
-              onClick={() => setExpression(example.expression)}
-              active={expression === example.expression}
-              variant={expression === example.expression ? "primary" : "secondary"}
+              onClick={() => switchDemo(demo)}
+              active={currentDemo.title === demo.title}
+              variant={currentDemo.title === demo.title ? "primary" : "secondary"}
             >
-              {example.title}
+              {demo.title}
             </Button>
           ))}
         </div>
+        {currentDemo && (
+          <div className="mt-2 rounded-md bg-gray-50 p-3">
+            <p className="text-sm text-gray-600">
+              <strong>当前演示：</strong>
+              {currentDemo.title} - {currentDemo.description}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-col gap-4">
         {/* 表达式输入 */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-default-foreground text-lg font-medium">Expression Input</h3>
+          <h3 className="text-default-foreground text-lg font-medium leading-6">
+            Expression Input
+          </h3>
           <p className="text-secondary-foreground">
-            Tip: Input <code>{"{{ "}$</code> to trigger auto-completion.
+            输入 <code>{"{{ "}$</code> 触发自动补全，可以修改表达式测试
           </p>
           <ExpressionEditor
             value={expression}
@@ -292,35 +219,33 @@ const ExpressionPlayground = () => {
 
         <div className="grid grid-cols-2 gap-4">
           {/* 输出格式切换 */}
-          <div>
-            <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>🎯 输出结果</h3>
-            <div style={{ marginBottom: "12px" }}>
-              <label
-                style={{
-                  marginRight: "20px",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="radio"
-                  value="string"
-                  checked={outputFormat === "string"}
-                  onChange={(e) => setOutputFormat(e.target.value as "string")}
-                  style={{ marginRight: "6px" }}
-                />
-                🔤 字符串输出
-              </label>
-              <label style={{ fontSize: "14px", cursor: "pointer" }}>
-                <input
-                  type="radio"
-                  value="ast"
-                  checked={outputFormat === "ast"}
-                  onChange={(e) => setOutputFormat(e.target.value as "ast")}
-                  style={{ marginRight: "6px" }}
-                />
-                🌳 AST 输出
-              </label>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-default-foreground flex-1 text-lg font-medium leading-6">
+                  🎯 Output
+                </h3>
+                <Segmented
+                  value={outputFormat}
+                  onChange={(value) => setOutputFormat(value as "string" | "ast")}
+                >
+                  <Segmented.Item
+                    className="px-2"
+                    value="string"
+                  >
+                    String
+                  </Segmented.Item>
+                  <Segmented.Item
+                    className="px-2"
+                    value="ast"
+                  >
+                    AST
+                  </Segmented.Item>
+                </Segmented>
+              </div>
+              <p className="text-secondary-foreground">
+                输出结果，可通过 <code>$result</code> 访问
+              </p>
             </div>
             <ResultPanel
               result={result}
@@ -329,43 +254,51 @@ const ExpressionPlayground = () => {
           </div>
 
           {/* 验证结果 */}
-          <div>
-            <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>🛡️ 验证结果</h3>
-            <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-              五层验证：语法 → 语义 → 安全 → 性能 → 业务
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-default-foreground text-lg font-medium leading-6">
+                🛡️ Validation
+              </h3>
+              <p className="text-secondary-foreground">
+                五层验证：语法 → 语义 → 安全 → 性能 → 业务
+              </p>
             </div>
             <ValidationPanel validation={validation} />
           </div>
-        </div>
 
-        {/* JSON 数据输入 */}
-        <div>
-          <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
-            📊 JSON 数据 ($json)
-          </h3>
-          <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-            当前节点的数据，可以通过 <code>$json.字段名</code> 访问
+          {/* JSON 数据输入 */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-default-foreground text-lg font-medium leading-6">
+                📊 JSON Data ($json)
+              </h3>
+              <p className="text-secondary-foreground">
+                当前演示的数据，通过 <code>$json.字段名</code> 访问
+              </p>
+            </div>
+            <JsonEditor
+              value={jsonData}
+              onChange={setJsonData}
+              placeholder="输入 JSON 数据..."
+            />
           </div>
-          <JsonEditor
-            value={jsonData}
-            onChange={setJsonData}
-            placeholder="输入 JSON 数据..."
-          />
-        </div>
 
-        {/* 自定义变量输入 */}
-        <div>
-          <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
-            🔧 自定义变量 ($vars)
-          </h3>
-          <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-            工作流全局变量，可以通过 <code>$vars.变量名</code> 访问
+          {/* 自定义变量输入 */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-default-foreground flex-1 text-lg font-medium leading-6">
+                🔧 Variables ($vars)
+              </h3>
+              <p className="text-secondary-foreground">
+                演示变量，通过 <code>$vars.变量名</code> 访问
+              </p>
+            </div>
+            <VarsEditor
+              value={varsData}
+              onChange={setVarsData}
+              placeholder="输入变量数据..."
+            />
           </div>
-          <VarsEditor
-            value={varsData}
-            onChange={setVarsData}
-            placeholder="输入变量数据..."
-          />
         </div>
       </div>
 
@@ -382,20 +315,17 @@ const ExpressionPlayground = () => {
         <h4 style={{ margin: "0 0 12px 0", color: "#333", fontSize: "1rem" }}>💡 功能说明</h4>
         <div style={{ fontSize: "13px", color: "#666", lineHeight: "1.5" }}>
           <div style={{ marginBottom: "8px" }}>
+            <strong>🎯 独立演示：</strong> 每个演示案例都有专属的简单数据，便于理解和学习
+          </div>
+          <div style={{ marginBottom: "8px" }}>
             <strong>🎯 自动补全：</strong> 输入 <code>{"{{ "}</code> 自动补全 <code>{" }}"}</code>
-            ，输入 <code>$</code> 显示变量提示，选择函数自动插入括号
+            ，输入 <code>$</code> 显示变量提示
           </div>
           <div style={{ marginBottom: "8px" }}>
-            <strong>🛡️ 安全验证：</strong> 实时检测危险代码、原型污染、代码注入等安全威胁，hover
-            错误位置查看详情
-          </div>
-          <div style={{ marginBottom: "8px" }}>
-            <strong>🚀 强大功能：</strong> 支持 n8n 语法、JMESPath 查询、Luxon 日期、Math
-            函数、条件判断、数组操作等
+            <strong>🛡️ 实时验证：</strong> 自动检测语法错误、安全威胁等，hover 错误查看详情
           </div>
           <div>
-            <strong>🌳 AST 输出：</strong> 切换到 AST
-            模式可查看表达式的语法树结构、复杂度分析和依赖分析
+            <strong>🚀 强大功能：</strong> 支持 JMESPath 查询、日期处理、数学函数、条件判断等
           </div>
         </div>
       </div>

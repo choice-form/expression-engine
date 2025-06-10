@@ -1,3 +1,4 @@
+import { tcx } from "@choiceform/design-system"
 import React from "react"
 
 interface ValidationPanelProps {
@@ -31,14 +32,7 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) => {
   const { isValid, errors, warnings, metadata } = validation
 
   return (
-    <div
-      style={{
-        border: "1px solid #d1d5db",
-        borderRadius: "6px",
-        backgroundColor: "#fff",
-        minHeight: "120px",
-      }}
-    >
+    <div className="overflow-hidden rounded-lg border">
       {/* 验证状态头部 */}
       <div
         style={{
@@ -52,22 +46,16 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) => {
         }}
       >
         <div
-          style={{
-            color: isValid && errors.length === 0 ? "#16a34a" : "#dc2626",
-            fontWeight: "500",
-            fontSize: "14px",
-          }}
+          className={tcx(
+            "text-default-foreground",
+            isValid && errors.length === 0 ? "text-success-foreground" : "text-danger-foreground",
+          )}
         >
           {isValid && errors.length === 0 ? "🛡️ 验证通过" : "⚠️ 验证问题"}
         </div>
         {metadata && (
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#6b7280",
-            }}
-          >
-            检查数: {metadata.totalChecks} | 耗时: {metadata.executionTime}ms
+          <div className="text-secondary-foreground">
+            Checks: {metadata.totalChecks} | Time: {metadata.executionTime.toFixed(3)}ms
           </div>
         )}
       </div>

@@ -98,7 +98,10 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
 
   return (
     <div>
-      <div ref={editorRef} />
+      <div
+        ref={editorRef}
+        className="focus-within:border-selected-boundary border-default-foreground flex-1 overflow-hidden rounded-md border-2"
+      />
       {!isValid && value.trim() && (
         <div
           style={{

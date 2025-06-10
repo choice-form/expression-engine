@@ -8,3 +8,18 @@
 .cm-editor.cm-focused {
   outline: none;
 }
+
+/* 表达式验证装饰器样式 */
+.expression-valid {
+  color: #16a34a !important; /* 绿色 */
+}
+
+.expression-warning {
+  background-color: #fffbeb !important; /* 浅黄背景 */
+  color: #d97706 !important; /* 橙色 */
+}
+
+.expression-error {
+  background-color: #fef2f2 !important; /* 浅红背景 */
+  color: #dc2626 !important; /* 红色 */
+}

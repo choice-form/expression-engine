@@ -4,7 +4,7 @@ import { EditorState } from "@codemirror/state"
 import { javascript } from "@codemirror/lang-javascript"
 
 import { useExpressionEditor } from "../hooks/use-expression-editor"
-import { createEditorExtensions } from "../utils/codemirror-themes"
+import { createEditorExtensions, updateValidationEffect } from "../utils/codemirror-themes"
 
 interface ExpressionEditorProps {
   theme: "light" | "dark"
@@ -54,10 +54,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       extensions: [
         ...createEditorExtensions({
           theme,
-          // 重新启用 JavaScript 语言支持以获得语法高亮
           language: javascript(),
-          // 移除全局验证颜色，让 linter 系统处理精确的错误位置标记
-          isValid: undefined,
           additionalExtensions: [
             autoCloseExtension,
             autoCompleteExtension,
@@ -83,9 +80,19 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       view.destroy()
       viewRef.current = undefined
     }
-  }, [theme, validation.isValid]) // 在主题或验证状态变化时重新创建
+  }, [theme]) // 只在主题变化时重新创建
 
-  // 验证状态颜色已通过主题应用，无需额外处理
+  // 更新验证装饰器
+  useEffect(() => {
+    if (viewRef.current) {
+      viewRef.current.dispatch({
+        effects: updateValidationEffect.of({
+          template: value,
+          validation: validation,
+        }),
+      })
+    }
+  }, [validation, value]) // 验证状态或模板内容变化时更新装饰器
 
   // 当值变化时更新编辑器内容（来自外部）
   useEffect(() => {
@@ -104,7 +111,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     <div className="flex flex-col gap-2">
       <div
         ref={editorRef}
-        className="focus-within:border-selected-boundary flex-1 overflow-hidden rounded-md border"
+        className="focus-within:border-selected-boundary border-default-foreground flex-1 overflow-hidden rounded-md border-2"
       />
       {!validation.isValid && validation.errors.length > 0 && (
         <div

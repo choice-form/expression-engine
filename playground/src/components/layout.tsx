@@ -17,7 +17,7 @@ const Layout = () => {
             onThemeChange={setTheme}
           />
 
-          <main className="max-w-screen p-4">
+          <main className="container mx-auto p-4">
             <Outlet />
           </main>
 

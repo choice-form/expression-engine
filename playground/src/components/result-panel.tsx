@@ -1,3 +1,4 @@
+import { tcx } from "@choiceform/design-system"
 import React from "react"
 
 interface ResultPanelProps {
@@ -24,14 +25,7 @@ const ResultPanel: React.FC<ResultPanelProps> = ({ result, outputFormat }) => {
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid #d1d5db",
-        borderRadius: "6px",
-        backgroundColor: "#fff",
-        minHeight: "150px",
-      }}
-    >
+    <div className="overflow-hidden rounded-lg border">
       {/* 结果状态头部 */}
       <div
         style={{
@@ -45,21 +39,15 @@ const ResultPanel: React.FC<ResultPanelProps> = ({ result, outputFormat }) => {
         }}
       >
         <div
-          style={{
-            color: result.success ? "#16a34a" : "#dc2626",
-            fontWeight: "500",
-            fontSize: "14px",
-          }}
+          className={tcx(
+            "text-default-foreground",
+            result.success ? "text-success-foreground" : "text-danger-foreground",
+          )}
         >
           {result.success ? "✅ 执行成功" : "❌ 执行失败"}
         </div>
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#6b7280",
-          }}
-        >
-          执行时间: {result.executionTime}ms | 类型: {result.type}
+        <div className="text-secondary-foreground">
+          Time: {result.executionTime.toFixed(3)}ms | Type: {result.type}
         </div>
       </div>
 
