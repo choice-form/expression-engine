@@ -178,7 +178,7 @@ export class TemplateParser {
    * 替换模板中的表达式
    */
   public replaceTemplate(template: string, evaluator: (expression: string) => unknown): string {
-    return template.replace(TemplateParser.TEMPLATE_REGEX, (match, expression) => {
+    return template.replace(TemplateParser.TEMPLATE_REGEX, (_match, expression) => {
       try {
         const result = evaluator(expression.trim())
         return String(result ?? "")

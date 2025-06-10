@@ -3,4 +3,8 @@
 @import "@choiceform/design-system/styles/theme.css";
 @import "@choiceform/design-system/styles/components.css";
 
-@source "../../node_modules/@choiceform/design-system";
+@source "../node_modules/@choiceform/design-system";
+
+.cm-editor.cm-focused {
+  outline: none;
+}

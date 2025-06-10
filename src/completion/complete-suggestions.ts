@@ -1544,7 +1544,7 @@ export class CompleteSuggestionProvider {
   }
 
   getMonacoCompletions() {
-    return this.allSuggestions.map((s, index) => ({
+    return this.allSuggestions.map((s, _index) => ({
       label: s.label,
       kind: this.getMonacoKind(s.type),
       insertText: s.label,

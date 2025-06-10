@@ -2,11 +2,12 @@ import React, { useRef, useEffect, useCallback } from "react"
 import { EditorView } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
 import { javascript } from "@codemirror/lang-javascript"
-import { oneDark } from "@codemirror/theme-one-dark"
-import { basicSetup } from "codemirror"
+
 import { useExpressionEditor } from "../hooks/use-expression-editor"
+import { createEditorExtensions } from "../utils/codemirror-themes"
 
 interface ExpressionEditorProps {
+  theme: "light" | "dark"
   value: string
   onChange: (value: string) => void
   validation: {
@@ -22,7 +23,12 @@ interface ExpressionEditorProps {
   }
 }
 
-const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ value, onChange, validation }) => {
+const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
+  value,
+  onChange,
+  validation,
+  theme,
+}) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView>()
   const onChangeRef = useRef(onChange)
@@ -46,38 +52,22 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ value, onChange, va
     const state = EditorState.create({
       doc: value,
       extensions: [
-        basicSetup,
-        javascript(),
-        oneDark,
-        autoCloseExtension,
-        autoCompleteExtension,
-        validationExtension,
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            stableOnChange(update.state.doc.toString())
-          }
-        }),
-        EditorView.theme({
-          "&": {
-            fontSize: "14px",
-            minHeight: "120px",
-          },
-          ".cm-focused": {
-            outline: "none",
-          },
-          ".cm-editor": {
-            borderRadius: "6px",
-            transition: "border-color 0.2s ease",
-          },
-          ".cm-content": {
-            padding: "12px",
-          },
-          ".cm-completions": {
-            zIndex: "1000",
-          },
-          ".cm-tooltip": {
-            zIndex: "1001",
-          },
+        ...createEditorExtensions({
+          theme,
+          // 重新启用 JavaScript 语言支持以获得语法高亮
+          language: javascript(),
+          // 移除全局验证颜色，让 linter 系统处理精确的错误位置标记
+          isValid: undefined,
+          additionalExtensions: [
+            autoCloseExtension,
+            autoCompleteExtension,
+            validationExtension,
+            EditorView.updateListener.of((update) => {
+              if (update.docChanged) {
+                stableOnChange(update.state.doc.toString())
+              }
+            }),
+          ],
         }),
       ],
     })
@@ -93,18 +83,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ value, onChange, va
       view.destroy()
       viewRef.current = undefined
     }
-  }, []) // 只在组件挂载时创建一次
+  }, [theme, validation.isValid]) // 在主题或验证状态变化时重新创建
 
-  // 单独处理验证状态变化，只更新样式
-  useEffect(() => {
-    if (!viewRef.current) return
-
-    const borderColor = validation.isValid ? "#d1d5db" : "#ef4444"
-    const editor = viewRef.current.dom.querySelector(".cm-editor") as HTMLElement
-    if (editor) {
-      editor.style.border = `1px solid ${borderColor}`
-    }
-  }, [validation.isValid])
+  // 验证状态颜色已通过主题应用，无需额外处理
 
   // 当值变化时更新编辑器内容（来自外部）
   useEffect(() => {
@@ -120,8 +101,11 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ value, onChange, va
   }, [value])
 
   return (
-    <div>
-      <div ref={editorRef} />
+    <div className="flex flex-col gap-2">
+      <div
+        ref={editorRef}
+        className="focus-within:border-selected-boundary flex-1 overflow-hidden rounded-md border"
+      />
       {!validation.isValid && validation.errors.length > 0 && (
         <div
           style={{

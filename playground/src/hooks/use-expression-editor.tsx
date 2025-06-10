@@ -132,7 +132,7 @@ export const useExpressionEditor = ({ validation }: UseExpressionEditorProps) =>
         info: item.detail || "",
         detail: item.documentation || "",
         boost: item.sortText ? parseInt(item.sortText) : 50,
-        apply: (view: any, completion: any, from: number, to: number) => {
+        apply: (view: any, _completion: any, from: number, to: number) => {
           let insert = item.insertText || item.label
           let cursorOffset = insert.length
 
@@ -194,9 +194,13 @@ export const useExpressionEditor = ({ validation }: UseExpressionEditorProps) =>
 
       // 添加错误
       validation.errors.forEach((error) => {
+        // 确保有有效的位置信息，如果没有则高亮整行
+        const from = error.position?.start || 0
+        const to = error.position?.end || (error.position?.start || 0) + 1
+
         diagnostics.push({
-          from: error.position?.start || 0,
-          to: error.position?.end || 0,
+          from,
+          to: Math.max(to, from + 1), // 确保至少高亮1个字符
           severity: "error",
           message: error.message,
         })
@@ -204,18 +208,20 @@ export const useExpressionEditor = ({ validation }: UseExpressionEditorProps) =>
 
       // 添加警告
       validation.warnings.forEach((warning) => {
+        const from = warning.position?.start || 0
+        const to = warning.position?.end || (warning.position?.start || 0) + 1
+
         diagnostics.push({
-          from: warning.position?.start || 0,
-          to: warning.position?.end || 0,
+          from,
+          to: Math.max(to, from + 1), // 确保至少高亮1个字符
           severity: "warning",
           message: warning.message,
         })
       })
-
       return diagnostics
     }
 
-    const tooltipSource = hoverTooltip((view: any, pos: number, side: any) => {
+    const tooltipSource = hoverTooltip((_view: any, pos: number, _side: any) => {
       // 查找位置相关的错误或警告
       const error = validation.errors.find(
         (e) => e.position && pos >= e.position.start && pos <= e.position.end,

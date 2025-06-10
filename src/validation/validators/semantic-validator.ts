@@ -271,6 +271,93 @@ export class VariableDependencyValidator extends BaseValidator {
   readonly name = "VariableDependency"
   readonly layer = "semantic" as const
 
+  // 性能优化：预编译正则表达式
+  private static readonly EXPRESSION_REGEX = /\{\{([^}]+)\}\}/g
+  private static readonly PROPERTY_ACCESS_REGEX =
+    /\$[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+/g
+  private static readonly DOLLAR_VARIABLE_REGEX = /\$[a-zA-Z_][a-zA-Z0-9_]*/g
+  private static readonly PROPERTY_ACCESS_SIMPLE_REGEX =
+    /\$[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*/g
+
+  // 性能优化：预创建内置方法Set
+  private static readonly ARRAY_METHODS = new Set([
+    "length",
+    "map",
+    "filter",
+    "reduce",
+    "forEach",
+    "find",
+    "findIndex",
+    "includes",
+    "indexOf",
+    "lastIndexOf",
+    "join",
+    "slice",
+    "splice",
+    "push",
+    "pop",
+    "shift",
+    "unshift",
+    "reverse",
+    "sort",
+    "concat",
+    "every",
+    "some",
+    "flat",
+    "flatMap",
+    "fill",
+    "copyWithin",
+  ])
+
+  private static readonly STRING_METHODS = new Set([
+    "length",
+    "charAt",
+    "charCodeAt",
+    "substring",
+    "substr",
+    "slice",
+    "toLowerCase",
+    "toUpperCase",
+    "trim",
+    "split",
+    "replace",
+    "match",
+    "search",
+    "indexOf",
+    "lastIndexOf",
+    "includes",
+    "startsWith",
+    "endsWith",
+    "padStart",
+    "padEnd",
+    "repeat",
+    "localeCompare",
+  ])
+
+  private static readonly NUMBER_METHODS = new Set([
+    "toString",
+    "toFixed",
+    "toExponential",
+    "toPrecision",
+    "valueOf",
+  ])
+
+  private static readonly OBJECT_METHODS = new Set([
+    "toString",
+    "valueOf",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "toLocaleString",
+  ])
+
+  // 添加缓存机制
+  private readonly propertyPathCache = new Map<string, string[]>()
+  private readonly validationCache = new Map<
+    string,
+    { isValid: boolean; message: string; hasWarning: boolean; warning?: string }
+  >()
+
   validate(context: ValidationContext): ValidationResult {
     const { template, parsed, context: exprContext } = context
     const errors: ValidationError[] = []
@@ -296,7 +383,7 @@ export class VariableDependencyValidator extends BaseValidator {
   }
 
   /**
-   * 验证原始模板的变量依赖
+   * 验证原始模板的变量依赖（性能优化版）
    */
   private validateRawTemplate(
     template: string,
@@ -306,7 +393,7 @@ export class VariableDependencyValidator extends BaseValidator {
     const warnings: ValidationWarning[] = []
 
     try {
-      const expressionMatches = template.matchAll(/\{\{([^}]+)\}\}/g)
+      const expressionMatches = template.matchAll(VariableDependencyValidator.EXPRESSION_REGEX)
 
       for (const match of expressionMatches) {
         const expression = match[1]?.trim()
@@ -323,6 +410,19 @@ export class VariableDependencyValidator extends BaseValidator {
           if (!this.isVariableAvailable(variable, exprContext)) {
             errors.push(
               this.createError("UNDEFINED_VARIABLE", `变量 '${variable}' 未定义或不可用`, position),
+            )
+          }
+        }
+
+        // 新增：在原始模板验证中也检查属性路径
+        const propertyPaths = this.extractPropertyPaths(expression)
+        for (const propertyPath of propertyPaths) {
+          const pathValidation = this.validatePropertyPath(propertyPath, exprContext)
+          if (!pathValidation.isValid) {
+            errors.push(this.createError("UNDEFINED_PROPERTY", pathValidation.message, position))
+          } else if (pathValidation.hasWarning && pathValidation.warning) {
+            warnings.push(
+              this.createWarning("RISKY_PROPERTY_ACCESS", pathValidation.warning, position),
             )
           }
         }
@@ -377,6 +477,17 @@ export class VariableDependencyValidator extends BaseValidator {
       }
     }
 
+    // 新增：检查属性路径的有效性
+    const propertyPaths = this.extractPropertyPaths(expression.cleaned)
+    for (const propertyPath of propertyPaths) {
+      const pathValidation = this.validatePropertyPath(propertyPath, exprContext)
+      if (!pathValidation.isValid) {
+        errors.push(this.createError("UNDEFINED_PROPERTY", pathValidation.message, position))
+      } else if (pathValidation.hasWarning && pathValidation.warning) {
+        warnings.push(this.createWarning("RISKY_PROPERTY_ACCESS", pathValidation.warning, position))
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -385,18 +496,19 @@ export class VariableDependencyValidator extends BaseValidator {
   }
 
   /**
-   * 从表达式中提取变量
+   * 从表达式中提取变量（性能优化版）
    */
   private extractVariables(expression: string): string[] {
     const variables = new Set<string>()
 
-    // 匹配以$开头的变量
-    const dollarVariables = expression.match(/\$[a-zA-Z_][a-zA-Z0-9_]*/g) || []
+    // 使用预编译的正则表达式匹配以$开头的变量
+    const dollarVariables =
+      expression.match(VariableDependencyValidator.DOLLAR_VARIABLE_REGEX) || []
     dollarVariables.forEach((v) => variables.add(v))
 
-    // 匹配对象属性访问（简化版）
+    // 使用预编译的正则表达式匹配对象属性访问（简化版）
     const propertyAccess =
-      expression.match(/\$[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*/g) || []
+      expression.match(VariableDependencyValidator.PROPERTY_ACCESS_SIMPLE_REGEX) || []
     propertyAccess.forEach((v) => {
       const baseVariable = v.split(".")[0]
       if (baseVariable) variables.add(baseVariable)
@@ -442,14 +554,224 @@ export class VariableDependencyValidator extends BaseValidator {
 
     return deprecatedVariables.has(variable)
   }
+
+  /**
+   * 从表达式中提取属性路径（带缓存优化，性能提升版）
+   */
+  private extractPropertyPaths(expression: string): string[] {
+    // 缓存检查
+    if (this.propertyPathCache.has(expression)) {
+      return this.propertyPathCache.get(expression)!
+    }
+
+    // 使用预编译的正则表达式匹配属性访问模式：$var.prop1.prop2...
+    const matches = expression.match(VariableDependencyValidator.PROPERTY_ACCESS_REGEX)
+    const propertyPaths = matches ? [...matches] : []
+
+    // 缓存结果（限制缓存大小）
+    if (this.propertyPathCache.size > 1000) {
+      this.propertyPathCache.clear()
+    }
+    this.propertyPathCache.set(expression, propertyPaths)
+
+    return propertyPaths
+  }
+
+  /**
+   * 验证属性路径是否存在（带缓存和早期退出优化）
+   */
+  private validatePropertyPath(
+    propertyPath: string,
+    context?: Partial<ExpressionContext>,
+  ): { isValid: boolean; message: string; hasWarning: boolean; warning?: string } {
+    // 生成缓存键（包含上下文哈希）
+    const contextHash = this.hashContext(context)
+    const cacheKey = `${propertyPath}:${contextHash}`
+
+    // 缓存检查
+    if (this.validationCache.has(cacheKey)) {
+      return this.validationCache.get(cacheKey)!
+    }
+
+    if (!context) {
+      const result = {
+        isValid: true,
+        message: "",
+        hasWarning: true,
+        warning: `无法验证属性路径 '${propertyPath}'：缺少上下文数据`,
+      }
+      this.cacheValidationResult(cacheKey, result)
+      return result
+    }
+
+    const pathParts = propertyPath.split(".")
+    const rootVariable = pathParts[0] // 如 $json
+    const propertyChain = pathParts.slice(1) // 如 ['company', 'city']
+
+    // 获取根变量的值
+    let currentValue: any
+
+    switch (rootVariable) {
+      case "$json":
+        currentValue = context.$json
+        break
+      case "$vars":
+        currentValue = context.$vars
+        break
+      case "$node":
+        currentValue = context.$node
+        break
+      case "$item":
+        currentValue = context.$item
+        break
+      default:
+        const result = { isValid: true, message: "", hasWarning: false }
+        this.cacheValidationResult(cacheKey, result)
+        return result
+    }
+
+    if (currentValue === undefined || currentValue === null) {
+      const result = {
+        isValid: false,
+        message: `根变量 '${rootVariable}' 为 null 或 undefined`,
+        hasWarning: false,
+      }
+      this.cacheValidationResult(cacheKey, result)
+      return result
+    }
+
+    // 逐层检查属性路径（早期退出优化）
+    for (let i = 0; i < propertyChain.length; i++) {
+      const property = propertyChain[i]
+      if (!property) {
+        continue // 跳过空属性名
+      }
+
+      const currentPath = `${rootVariable}.${propertyChain.slice(0, i + 1).join(".")}`
+
+      // 早期退出：检查 null/undefined
+      if (currentValue === null || currentValue === undefined) {
+        const result = {
+          isValid: false,
+          message: `属性路径 '${currentPath}' 访问了 null/undefined 值`,
+          hasWarning: false,
+        }
+        this.cacheValidationResult(cacheKey, result)
+        return result
+      }
+
+      // 早期退出：检查类型
+      // 字符串、数组和对象都可以有属性，其他类型需要检查
+      if (typeof currentValue !== "object" && typeof currentValue !== "string") {
+        const result = {
+          isValid: false,
+          message: `属性路径 '${currentPath}' 试图访问不支持属性的类型 (${typeof currentValue})`,
+          hasWarning: false,
+        }
+        this.cacheValidationResult(cacheKey, result)
+        return result
+      }
+
+      // 检查属性是否存在（包括原型链上的方法）
+      let hasProperty = false
+
+      try {
+        // 对于原始类型（如字符串），直接检查是否是内置方法
+        if (typeof currentValue === "string" || typeof currentValue === "number") {
+          hasProperty = this.isBuiltinMethod(currentValue, property)
+        } else if (currentValue && typeof currentValue === "object") {
+          hasProperty = property in currentValue
+        }
+      } catch (error) {
+        // 如果检查失败，回退到内置方法检查
+        hasProperty = this.isBuiltinMethod(currentValue, property)
+      }
+
+      if (!hasProperty) {
+        const result = {
+          isValid: false,
+          message: `属性 '${property}' 在 '${rootVariable}.${propertyChain.slice(0, i).join(".")}' 中不存在`,
+          hasWarning: false,
+        }
+        this.cacheValidationResult(cacheKey, result)
+        return result
+      }
+
+      currentValue = currentValue[property]
+    }
+
+    const result = { isValid: true, message: "", hasWarning: false }
+    this.cacheValidationResult(cacheKey, result)
+    return result
+  }
+
+  /**
+   * 生成上下文哈希（用于缓存键）
+   */
+  private hashContext(context?: Partial<ExpressionContext>): string {
+    if (!context) return "empty"
+
+    // 只哈希相关的属性，提高缓存命中率
+    const relevantData = {
+      $json: context.$json,
+      $vars: context.$vars,
+      $node: context.$node,
+      $item: context.$item,
+    }
+
+    return JSON.stringify(relevantData).slice(0, 50) // 限制长度
+  }
+
+  /**
+   * 检查是否是内置方法或属性（性能大幅优化版）
+   */
+  private isBuiltinMethod(value: any, property: string): boolean {
+    // 使用预创建的Set，避免每次调用都创建新对象
+    if (Array.isArray(value)) {
+      return VariableDependencyValidator.ARRAY_METHODS.has(property)
+    }
+
+    if (typeof value === "string") {
+      return VariableDependencyValidator.STRING_METHODS.has(property)
+    }
+
+    if (typeof value === "number") {
+      return VariableDependencyValidator.NUMBER_METHODS.has(property)
+    }
+
+    // 对象的通用方法
+    return VariableDependencyValidator.OBJECT_METHODS.has(property)
+  }
+
+  /**
+   * 缓存验证结果
+   */
+  private cacheValidationResult(
+    cacheKey: string,
+    result: { isValid: boolean; message: string; hasWarning: boolean; warning?: string },
+  ): void {
+    // 限制缓存大小，防止内存泄漏
+    if (this.validationCache.size > 500) {
+      // 清理最旧的 25% 缓存
+      const keysToDelete = Array.from(this.validationCache.keys()).slice(0, 125)
+      keysToDelete.forEach((key) => this.validationCache.delete(key))
+    }
+
+    this.validationCache.set(cacheKey, result)
+  }
 }
 
 /**
- * 函数参数验证器
+ * 函数参数验证器（性能优化版）
  */
 export class FunctionParameterValidator extends BaseValidator {
   readonly name = "FunctionParameter"
   readonly layer = "semantic" as const
+
+  // 性能优化：预编译正则表达式
+  private static readonly EXPRESSION_REGEX = /\{\{([^}]+)\}\}/g
+  private static readonly FUNCTION_NAME_REGEX =
+    /(\$[a-zA-Z_][a-zA-Z0-9_]*|Math\.[a-zA-Z_][a-zA-Z0-9_]*|[a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g
 
   validate(context: ValidationContext): ValidationResult {
     const { template, parsed } = context
@@ -482,7 +804,7 @@ export class FunctionParameterValidator extends BaseValidator {
     const warnings: ValidationWarning[] = []
 
     try {
-      const expressionMatches = template.matchAll(/\{\{([^}]+)\}\}/g)
+      const expressionMatches = template.matchAll(FunctionParameterValidator.EXPRESSION_REGEX)
 
       for (const match of expressionMatches) {
         const expression = match[1]?.trim()
@@ -493,7 +815,7 @@ export class FunctionParameterValidator extends BaseValidator {
           match.index!,
           match.index! + match[0].length,
         )
-        const functions = this.extractFunctionCalls(expression)
+        const functions = this.extractFunctionCallsWithNesting(expression)
 
         for (const func of functions) {
           const validationResult = this.validateFunctionCall(func)
@@ -542,7 +864,7 @@ export class FunctionParameterValidator extends BaseValidator {
       expression.position.start,
       expression.position.end,
     )
-    const functions = this.extractFunctionCalls(expression.cleaned)
+    const functions = this.extractFunctionCallsWithNesting(expression.cleaned)
 
     for (const func of functions) {
       const validationResult = this.validateFunctionCall(func)
@@ -563,22 +885,6 @@ export class FunctionParameterValidator extends BaseValidator {
       errors,
       warnings,
     }
-  }
-
-  /**
-   * 从表达式中提取函数调用
-   */
-  private extractFunctionCalls(
-    expression: string,
-  ): Array<{ argCount: number; fullMatch: string; name: string }> {
-    const functions: Array<{
-      argCount: number
-      fullMatch: string
-      name: string
-    }> = []
-
-    // 使用更智能的方法提取函数调用，正确处理嵌套括号
-    return this.extractFunctionCallsWithNesting(expression)
   }
 
   /**
@@ -653,12 +959,12 @@ export class FunctionParameterValidator extends BaseValidator {
       name: string
     }> = []
 
-    // 匹配函数名的正则
-    const functionNamePattern =
-      /(\$[a-zA-Z_][a-zA-Z0-9_]*|Math\.[a-zA-Z_][a-zA-Z0-9_]*|[a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g
+    // 使用预编译的正则表达式匹配函数名
     let match
+    // 重置regex的lastIndex以确保每次从头开始匹配
+    FunctionParameterValidator.FUNCTION_NAME_REGEX.lastIndex = 0
 
-    while ((match = functionNamePattern.exec(expression)) !== null) {
+    while ((match = FunctionParameterValidator.FUNCTION_NAME_REGEX.exec(expression)) !== null) {
       const functionName = match[1]!
       const startPos = match.index!
       const openParenPos = match.index! + match[0].length - 1
@@ -862,11 +1168,17 @@ export class FunctionParameterValidator extends BaseValidator {
 }
 
 /**
- * 类型兼容性验证器
+ * 类型兼容性验证器（性能优化版）
  */
 export class TypeCompatibilityValidator extends BaseValidator {
   readonly name = "TypeCompatibility"
   readonly layer = "semantic" as const
+
+  // 性能优化：预编译正则表达式
+  private static readonly EXPRESSION_REGEX = /\{\{([^}]+)\}\}/g
+  private static readonly MIXED_ARITHMETIC_REGEX =
+    /["'].*["']\s*[+\-*/]\s*\d+|\d+\s*[+\-*/]\s*["'].*["']/
+  private static readonly DIVISION_BY_ZERO_REGEX = /\/\s*0(?![.]|\d)/
 
   validate(context: ValidationContext): ValidationResult {
     const { template } = context
@@ -874,7 +1186,7 @@ export class TypeCompatibilityValidator extends BaseValidator {
     const warnings: ValidationWarning[] = []
 
     try {
-      const expressionMatches = template.matchAll(/\{\{([^}]+)\}\}/g)
+      const expressionMatches = template.matchAll(TypeCompatibilityValidator.EXPRESSION_REGEX)
 
       for (const match of expressionMatches) {
         const expression = match[1]?.trim()
@@ -909,7 +1221,7 @@ export class TypeCompatibilityValidator extends BaseValidator {
   }
 
   /**
-   * 分析类型兼容性
+   * 分析类型兼容性（性能优化版）
    */
   private analyzeTypeCompatibility(expression: string): {
     errors: Array<{ code: string; message: string }>
@@ -918,16 +1230,16 @@ export class TypeCompatibilityValidator extends BaseValidator {
     const errors: Array<{ code: string; message: string }> = []
     const warnings: Array<{ code: string; message: string }> = []
 
-    // 检查算术操作
-    if (/["'].*["']\s*[+\-*/]\s*\d+|\d+\s*[+\-*/]\s*["'].*["']/.test(expression)) {
+    // 使用预编译的正则表达式检查算术操作
+    if (TypeCompatibilityValidator.MIXED_ARITHMETIC_REGEX.test(expression)) {
       warnings.push({
         code: "MIXED_TYPE_ARITHMETIC",
         message: "字符串和数字的算术操作可能产生意外结果",
       })
     }
 
-    // 检查除零操作
-    if (/\/\s*0(?![.]|\d)/.test(expression)) {
+    // 使用预编译的正则表达式检查除零操作
+    if (TypeCompatibilityValidator.DIVISION_BY_ZERO_REGEX.test(expression)) {
       warnings.push({
         code: "DIVISION_BY_ZERO",
         message: "可能存在除零操作",

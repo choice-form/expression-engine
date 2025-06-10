@@ -2,8 +2,9 @@ import React, { useRef, useEffect } from "react"
 import { EditorView } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
 import { json } from "@codemirror/lang-json"
-import { oneDark } from "@codemirror/theme-one-dark"
 import { basicSetup } from "codemirror"
+import { useTheme } from "../hooks"
+import { getCodeMirrorTheme, getEditorStyles, getBorderColor } from "../utils/codemirror-themes"
 
 interface JsonEditorProps {
   value: string
@@ -18,6 +19,20 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView>()
+  const { theme } = useTheme()
+
+  // 验证JSON格式
+  const isValidJson = (jsonStr: string): boolean => {
+    try {
+      JSON.parse(jsonStr)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const isValid = isValidJson(value)
+  const themeMode = theme === "system" ? "light" : theme
 
   useEffect(() => {
     if (!editorRef.current) return
@@ -27,7 +42,8 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
       extensions: [
         basicSetup,
         json(),
-        oneDark,
+        getCodeMirrorTheme(themeMode),
+        getEditorStyles(themeMode),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChange(update.state.doc.toString())
@@ -35,21 +51,10 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
         }),
         EditorView.theme({
           "&": {
-            fontSize: "14px",
             minHeight: "200px",
           },
-          ".cm-focused": {
-            outline: "none",
-          },
-          ".cm-editor": {
-            border: "1px solid #d1d5db",
-            borderRadius: "6px",
-          },
-          ".cm-content": {
-            padding: "12px",
-          },
           ".cm-placeholder": {
-            color: "#9ca3af",
+            color: themeMode === "dark" ? "#6b7280" : "#9ca3af",
           },
         }),
         EditorView.contentAttributes.of({ "data-placeholder": placeholder }),
@@ -66,7 +71,18 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
     return () => {
       view.destroy()
     }
-  }, [placeholder])
+  }, [themeMode, placeholder])
+
+  // 动态更新验证状态边框
+  useEffect(() => {
+    if (!viewRef.current) return
+
+    const borderColor = getBorderColor(themeMode, isValid)
+    const editor = viewRef.current.dom.querySelector(".cm-editor") as HTMLElement
+    if (editor) {
+      editor.style.border = `1px solid ${borderColor}`
+    }
+  }, [isValid, themeMode])
 
   useEffect(() => {
     if (viewRef.current && viewRef.current.state.doc.toString() !== value) {
@@ -79,18 +95,6 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
       })
     }
   }, [value])
-
-  // 验证JSON格式
-  const isValidJson = (jsonStr: string): boolean => {
-    try {
-      JSON.parse(jsonStr)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  const isValid = isValidJson(value)
 
   return (
     <div>

@@ -9,8 +9,12 @@ import JsonEditor from "./json-editor"
 import VarsEditor from "./vars-editor"
 import ResultPanel from "./result-panel"
 import ValidationPanel from "./validation-panel"
+import { Button } from "@choiceform/design-system"
+import { useTheme } from "../hooks"
 
-const ExpressionPlayground: React.FC = () => {
+const ExpressionPlayground = () => {
+  const { theme } = useTheme()
+
   // 状态管理
   const [expression, setExpression] = useState(
     '{{ $json.user.name }}，{{ $json.user.age >= 18 ? "成年人" : "未成年" }}，在{{ $json.company.city }}工作',
@@ -249,117 +253,44 @@ const ExpressionPlayground: React.FC = () => {
   }, [expression, jsonData, varsData]) // 只依赖这三个直接输入的值
 
   return (
-    <div>
-      {/* 功能演示区域 */}
-      <div
-        style={{
-          marginBottom: "24px",
-          padding: "16px",
-          backgroundColor: "#f8f9fa",
-          borderRadius: "8px",
-          border: "1px solid #e9ecef",
-        }}
-      >
-        <h4 style={{ margin: "0 0 12px 0", color: "#333", fontSize: "1rem" }}>
-          🎯 表达式能力演示 - 点击快速体验
+    <div className="flex min-w-0 flex-col gap-8">
+      <div className="border-default-boundary flex flex-col gap-4 rounded-lg border p-4">
+        <h4 className="text-default-foreground text-lg font-medium">
+          🎯 Expression Engine Explorer
         </h4>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "8px",
-          }}
-        >
+        <p className="text-secondary-foreground">
+          Click to experience the expression engine, support AST output
+        </p>
+        <div className="flex flex-wrap gap-4">
           {examples.map((example, index) => (
-            <button
+            <Button
               key={index}
               onClick={() => setExpression(example.expression)}
-              style={{
-                padding: "8px 12px",
-                backgroundColor: expression === example.expression ? "#3b82f6" : "#ffffff",
-                color: expression === example.expression ? "#ffffff" : "#374151",
-                border: "1px solid #d1d5db",
-                borderRadius: "4px",
-                fontSize: "12px",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (expression !== example.expression) {
-                  e.currentTarget.style.backgroundColor = "#f3f4f6"
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (expression !== example.expression) {
-                  e.currentTarget.style.backgroundColor = "#ffffff"
-                }
-              }}
+              active={expression === example.expression}
+              variant={expression === example.expression ? "primary" : "secondary"}
             >
               {example.title}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {/* 主要内容区域 */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "24px",
-        }}
-      >
-        {/* 左侧：输入区域 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {/* 表达式输入 */}
-          <div>
-            <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
-              📝 表达式输入
-            </h3>
-            <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-              提示：输入 <code>{"{{ "}$</code> 可触发自动补全，支持所有 n8n 语法
-            </div>
-            <ExpressionEditor
-              value={expression}
-              onChange={setExpression}
-              validation={validation}
-            />
-          </div>
-
-          {/* JSON 数据输入 */}
-          <div>
-            <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
-              📊 JSON 数据 ($json)
-            </h3>
-            <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-              当前节点的数据，可以通过 <code>$json.字段名</code> 访问
-            </div>
-            <JsonEditor
-              value={jsonData}
-              onChange={setJsonData}
-              placeholder="输入 JSON 数据..."
-            />
-          </div>
-
-          {/* 自定义变量输入 */}
-          <div>
-            <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
-              🔧 自定义变量 ($vars)
-            </h3>
-            <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-              工作流全局变量，可以通过 <code>$vars.变量名</code> 访问
-            </div>
-            <VarsEditor
-              value={varsData}
-              onChange={setVarsData}
-              placeholder="输入变量数据..."
-            />
-          </div>
+      <div className="flex min-w-0 flex-col gap-4">
+        {/* 表达式输入 */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-default-foreground text-lg font-medium">Expression Input</h3>
+          <p className="text-secondary-foreground">
+            Tip: Input <code>{"{{ "}$</code> to trigger auto-completion.
+          </p>
+          <ExpressionEditor
+            value={expression}
+            onChange={setExpression}
+            validation={validation}
+            theme={theme === "dark" ? "dark" : "light"}
+          />
         </div>
 
-        {/* 右侧：输出区域 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div className="grid grid-cols-2 gap-4">
           {/* 输出格式切换 */}
           <div>
             <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>🎯 输出结果</h3>
@@ -405,6 +336,36 @@ const ExpressionPlayground: React.FC = () => {
             </div>
             <ValidationPanel validation={validation} />
           </div>
+        </div>
+
+        {/* JSON 数据输入 */}
+        <div>
+          <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
+            📊 JSON 数据 ($json)
+          </h3>
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
+            当前节点的数据，可以通过 <code>$json.字段名</code> 访问
+          </div>
+          <JsonEditor
+            value={jsonData}
+            onChange={setJsonData}
+            placeholder="输入 JSON 数据..."
+          />
+        </div>
+
+        {/* 自定义变量输入 */}
+        <div>
+          <h3 style={{ margin: "0 0 8px 0", color: "#333", fontSize: "1.1rem" }}>
+            🔧 自定义变量 ($vars)
+          </h3>
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
+            工作流全局变量，可以通过 <code>$vars.变量名</code> 访问
+          </div>
+          <VarsEditor
+            value={varsData}
+            onChange={setVarsData}
+            placeholder="输入变量数据..."
+          />
         </div>
       </div>
 
