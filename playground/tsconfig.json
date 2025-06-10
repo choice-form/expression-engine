@@ -23,8 +23,7 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@choiceform/expression-engine": ["../src/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

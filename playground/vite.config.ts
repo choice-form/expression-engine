@@ -5,11 +5,10 @@ import tailwindcss from "@tailwindcss/vite"
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: "/expression-engine/", // 改为主仓库名称
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
-      // 使用本地开发版本的表达式引擎
-      "@choiceform/expression-engine": resolve(__dirname, "../src/index.ts"),
     },
   },
   server: {
