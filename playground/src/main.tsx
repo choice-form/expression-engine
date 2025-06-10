@@ -5,7 +5,7 @@ import App from "./app"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/expression-engine">
       <App />
     </BrowserRouter>
   </React.StrictMode>,
