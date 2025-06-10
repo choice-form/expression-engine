@@ -1,9 +1,5 @@
-import React, { useState, useMemo, useCallback } from "react"
-import {
-  ExpressionEngine,
-  ContextManager,
-  createDefaultValidationEngine,
-} from "@choiceform/expression-engine"
+import React, { useMemo, useCallback, useReducer } from "react"
+import { ExpressionEngine, ContextManager } from "@choiceform/expression-engine"
 import { Button, Segmented } from "@choiceform/design-system"
 import ExpressionEditor from "./expression-editor"
 import ResultPanel from "./result-panel"
@@ -13,60 +9,213 @@ import VarsEditor from "./vars-editor"
 import { useTheme } from "../hooks"
 import { DEMO_EXAMPLES, type DemoExample } from "../constants/demos"
 
+// 统一的状态类型定义
+interface PlaygroundState {
+  // 核心内容
+  expression: string
+  jsonData: string
+  varsData: string
+  currentDemo: DemoExample
+
+  // UI控制
+  outputFormat: "string" | "ast"
+  cursorPosition?: number
+
+  // 统一验证状态（来自engine API，所有组件共享）
+  validation: {
+    isValid: boolean
+    errors: Array<{
+      code?: string
+      message: string
+      layer: string
+      severity: "error" | "warning"
+      position?: { start: number; end: number }
+      suggestions?: string[]
+    }>
+    warnings: Array<{
+      code?: string
+      message: string
+      layer: string
+      severity: "error" | "warning"
+      position?: { start: number; end: number }
+      suggestions?: string[]
+    }>
+    metadata?: {
+      totalChecks: number
+      executionTime: number
+      layers: string[]
+    }
+  }
+}
+
+// 统一的Action类型
+type PlaygroundAction =
+  | { type: "SET_EXPRESSION"; payload: string }
+  | { type: "SET_JSON_DATA"; payload: string }
+  | { type: "SET_VARS_DATA"; payload: string }
+  | { type: "SET_OUTPUT_FORMAT"; payload: "string" | "ast" }
+  | { type: "SET_CURSOR_POSITION"; payload: number | undefined }
+  | { type: "SET_VALIDATION"; payload: PlaygroundState["validation"] }
+  | { type: "SWITCH_DEMO"; payload: DemoExample }
+
+// 初始状态
+const createInitialState = (demo: DemoExample): PlaygroundState => ({
+  expression: demo.expression,
+  jsonData: demo.jsonData,
+  varsData: demo.varsData,
+  currentDemo: demo,
+  outputFormat: "string",
+  cursorPosition: undefined,
+  validation: {
+    isValid: true,
+    errors: [],
+    warnings: [],
+    metadata: { totalChecks: 0, executionTime: 0, layers: [] },
+  },
+})
+
+// 状态reducer
+const playgroundReducer = (state: PlaygroundState, action: PlaygroundAction): PlaygroundState => {
+  switch (action.type) {
+    case "SET_EXPRESSION":
+      return { ...state, expression: action.payload }
+
+    case "SET_JSON_DATA":
+      return { ...state, jsonData: action.payload }
+
+    case "SET_VARS_DATA":
+      return { ...state, varsData: action.payload }
+
+    case "SET_OUTPUT_FORMAT":
+      return { ...state, outputFormat: action.payload }
+
+    case "SET_CURSOR_POSITION":
+      return { ...state, cursorPosition: action.payload }
+
+    case "SET_VALIDATION":
+      return { ...state, validation: action.payload }
+
+    case "SWITCH_DEMO":
+      return {
+        ...state,
+        expression: action.payload.expression,
+        jsonData: action.payload.jsonData,
+        varsData: action.payload.varsData,
+        currentDemo: action.payload,
+      }
+
+    default:
+      return state
+  }
+}
+
 const ExpressionPlayground = () => {
   const { theme } = useTheme()
 
-  // 当前选中的演示
-  const [currentDemo, setCurrentDemo] = useState<DemoExample>(DEMO_EXAMPLES[0]!)
+  // 使用useReducer统一管理状态
+  const [state, dispatch] = useReducer(playgroundReducer, createInitialState(DEMO_EXAMPLES[0]!))
 
-  // 状态管理
-  const [expression, setExpression] = useState(currentDemo.expression)
-  const [jsonData, setJsonData] = useState(currentDemo.jsonData)
-  const [varsData, setVarsData] = useState(currentDemo.varsData)
-  const [outputFormat, setOutputFormat] = useState<"string" | "ast">("string")
-
-  // 创建引擎实例 - 使用 useMemo 避免重复创建
+  // 创建引擎实例 - 保持单例
   const engine = useMemo(() => new ExpressionEngine(), [])
   const contextManager = useMemo(() => new ContextManager(), [])
-  const validator = useMemo(() => createDefaultValidationEngine(), [])
 
-  // 解析JSON数据 - 使用 useMemo 缓存结果
-  const jsonParsed = useMemo(() => {
-    try {
-      return JSON.parse(jsonData)
-    } catch {
-      return {}
+  // 解析数据 - 简化计算
+  const parsedData = useMemo(() => {
+    const parseJSON = (str: string) => {
+      try {
+        return JSON.parse(str)
+      } catch {
+        return {}
+      }
     }
-  }, [jsonData])
 
-  const varsParsed = useMemo(() => {
-    try {
-      return JSON.parse(varsData)
-    } catch {
-      return {}
+    return {
+      json: parseJSON(state.jsonData),
+      vars: parseJSON(state.varsData),
     }
-  }, [varsData])
+  }, [state.jsonData, state.varsData])
 
-  // 创建执行上下文 - 使用 useMemo 缓存
+  // 创建执行上下文
   const context = useMemo(() => {
     return contextManager.createRuntimeContext({
-      json: jsonParsed,
-      vars: varsParsed,
+      json: parsedData.json,
+      vars: parsedData.vars,
       node: { id: "playground", type: "test" },
     })
-  }, [contextManager, jsonParsed, varsParsed])
+  }, [contextManager, parsedData])
 
-  // 切换演示
-  const switchDemo = useCallback((demo: DemoExample) => {
-    setCurrentDemo(demo)
-    setExpression(demo.expression)
-    setJsonData(demo.jsonData)
-    setVarsData(demo.varsData)
-  }, [])
+  // 简化的验证逻辑 - 统一使用engine API
+  const validateExpression = useCallback(async () => {
+    const { expression } = state
+
+    // 空表达式处理
+    if (!expression.trim()) {
+      const emptyResult = {
+        isValid: false,
+        errors: [
+          {
+            code: "EMPTY",
+            message: "表达式不能为空",
+            layer: "syntax",
+            severity: "error" as const,
+            position: { start: 0, end: 0, line: 1, column: 1 },
+          },
+        ],
+        warnings: [],
+        metadata: { totalChecks: 1, executionTime: 0, layers: ["syntax"] },
+      }
+
+      dispatch({ type: "SET_VALIDATION", payload: emptyResult })
+      return
+    }
+
+    try {
+      // 执行真实验证，所有组件使用相同结果
+      const validationResult = engine.validate(expression)
+      const formattedResult = {
+        isValid: validationResult.isValid,
+        errors: (validationResult.errors || []).map((error) => ({
+          code: error.code,
+          message: error.message,
+          layer: "engine",
+          severity: (error.severity as "error" | "warning") || "error",
+          position: error.position,
+        })),
+        warnings: (validationResult.warnings || []).map((warning) => ({
+          code: warning.code,
+          message: warning.message,
+          layer: "engine",
+          severity: (warning.severity as "error" | "warning") || "warning",
+          position: warning.position,
+        })),
+        metadata: { totalChecks: 1, executionTime: 0, layers: ["engine"] },
+      }
+
+      // 更新验证结果，所有组件共享
+      dispatch({ type: "SET_VALIDATION", payload: formattedResult })
+    } catch (error: any) {
+      const errorResult = {
+        isValid: false,
+        errors: [
+          {
+            code: "VALIDATION_ERROR",
+            message: error.message || "验证失败",
+            layer: "system",
+            severity: "error" as const,
+            position: { start: 0, end: expression.length, line: 1, column: 1 },
+          },
+        ],
+        warnings: [],
+        metadata: { totalChecks: 1, executionTime: 0, layers: ["system"] },
+      }
+
+      dispatch({ type: "SET_VALIDATION", payload: errorResult })
+    }
+  }, [state.expression, engine])
 
   // 执行表达式
   const result = useMemo(() => {
-    if (!expression.trim()) {
+    if (!state.expression.trim()) {
       return {
         success: false,
         value: "",
@@ -77,8 +226,8 @@ const ExpressionPlayground = () => {
     }
 
     try {
-      engine.setOutputFormat(outputFormat)
-      const evalResult = engine.evaluate(expression, context)
+      engine.setOutputFormat(state.outputFormat)
+      const evalResult = engine.evaluate(state.expression, context)
       return {
         success: evalResult.success || false,
         value: evalResult.value || "",
@@ -93,81 +242,53 @@ const ExpressionPlayground = () => {
         value: "",
         error: {
           message: error.message || "执行错误",
-          position: { start: 0, end: expression.length },
+          position: { start: 0, end: state.expression.length },
         },
         type: "error",
         executionTime: 0,
       } as const
     }
-  }, [expression, outputFormat, engine, context])
+  }, [state.expression, state.outputFormat, engine, context])
 
-  // 验证结果状态
-  const [validation, setValidation] = useState<any>({
-    isValid: true,
-    errors: [],
-    warnings: [],
-    metadata: { totalChecks: 0, executionTime: 0, layers: [] },
-  })
-
-  // 验证表达式函数
-  const validateExpression = useCallback(async () => {
-    if (!expression.trim()) {
-      return {
-        isValid: false,
-        errors: [
-          {
-            code: "EMPTY",
-            message: "表达式不能为空",
-            layer: "syntax",
-            severity: "error",
-            position: { start: 0, end: 0, line: 1, column: 1 },
-          },
-        ],
-        warnings: [],
-        metadata: { totalChecks: 1, executionTime: 0, layers: ["syntax"] },
-      }
-    }
-
-    try {
-      const validationResult = await validator.validate(expression, context)
-      return {
-        isValid: validationResult.isValid,
-        errors: validationResult.errors || [],
-        warnings: validationResult.warnings || [],
-        metadata: { totalChecks: 0, executionTime: 0, layers: [] },
-      }
-    } catch (error: any) {
-      return {
-        isValid: false,
-        errors: [
-          {
-            code: "VALIDATION_ERROR",
-            message: error.message || "验证失败",
-            layer: "system",
-            severity: "error",
-            position: { start: 0, end: expression.length, line: 1, column: 1 },
-          },
-        ],
-        warnings: [],
-        metadata: { totalChecks: 1, executionTime: 0, layers: ["system"] },
-      }
-    }
-  }, [expression, validator, context])
-
-  // 当表达式、上下文变化时更新验证结果
+  // 验证触发
   React.useEffect(() => {
     let isCancelled = false
 
-    validateExpression().then((result) => {
+    validateExpression().catch((error) => {
       if (!isCancelled) {
-        setValidation(result)
+        console.error("Validation error:", error)
       }
     })
 
     return () => {
       isCancelled = true
     }
-  }, [expression, jsonData, varsData])
+  }, [validateExpression])
+
+  // 事件处理器
+  const handleExpressionChange = useCallback((value: string) => {
+    dispatch({ type: "SET_EXPRESSION", payload: value })
+  }, [])
+
+  const handleCursorChange = useCallback((position: number | undefined) => {
+    dispatch({ type: "SET_CURSOR_POSITION", payload: position })
+  }, [])
+
+  const handleSwitchDemo = useCallback((demo: DemoExample) => {
+    dispatch({ type: "SWITCH_DEMO", payload: demo })
+  }, [])
+
+  const handleJsonDataChange = useCallback((value: string) => {
+    dispatch({ type: "SET_JSON_DATA", payload: value })
+  }, [])
+
+  const handleVarsDataChange = useCallback((value: string) => {
+    dispatch({ type: "SET_VARS_DATA", payload: value })
+  }, [])
+
+  const handleOutputFormatChange = useCallback((value: string) => {
+    dispatch({ type: "SET_OUTPUT_FORMAT", payload: value as "string" | "ast" })
+  }, [])
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
@@ -182,19 +303,19 @@ const ExpressionPlayground = () => {
           {DEMO_EXAMPLES.map((demo, index) => (
             <Button
               key={index}
-              onClick={() => switchDemo(demo)}
-              active={currentDemo.title === demo.title}
-              variant={currentDemo.title === demo.title ? "primary" : "secondary"}
+              onClick={() => handleSwitchDemo(demo)}
+              active={state.currentDemo.title === demo.title}
+              variant={state.currentDemo.title === demo.title ? "primary" : "secondary"}
             >
               {demo.title}
             </Button>
           ))}
         </div>
-        {currentDemo && (
+        {state.currentDemo && (
           <div className="mt-2 rounded-md bg-gray-50 p-3">
             <p className="text-sm text-gray-600">
               <strong>当前演示：</strong>
-              {currentDemo.title} - {currentDemo.description}
+              {state.currentDemo.title} - {state.currentDemo.description}
             </p>
           </div>
         )}
@@ -210,9 +331,10 @@ const ExpressionPlayground = () => {
             输入 <code>{"{{ "}$</code> 触发自动补全，可以修改表达式测试
           </p>
           <ExpressionEditor
-            value={expression}
-            onChange={setExpression}
-            validation={validation}
+            value={state.expression}
+            onChange={handleExpressionChange}
+            onCursorChange={handleCursorChange}
+            validation={state.validation}
             theme={theme === "dark" ? "dark" : "light"}
           />
         </div>
@@ -226,8 +348,8 @@ const ExpressionPlayground = () => {
                   🎯 Output
                 </h3>
                 <Segmented
-                  value={outputFormat}
-                  onChange={(value) => setOutputFormat(value as "string" | "ast")}
+                  value={state.outputFormat}
+                  onChange={handleOutputFormatChange}
                 >
                   <Segmented.Item
                     className="px-2"
@@ -249,7 +371,7 @@ const ExpressionPlayground = () => {
             </div>
             <ResultPanel
               result={result}
-              outputFormat={outputFormat}
+              outputFormat={state.outputFormat}
             />
           </div>
 
@@ -263,7 +385,7 @@ const ExpressionPlayground = () => {
                 五层验证：语法 → 语义 → 安全 → 性能 → 业务
               </p>
             </div>
-            <ValidationPanel validation={validation} />
+            <ValidationPanel validation={state.validation} />
           </div>
 
           {/* JSON 数据输入 */}
@@ -277,8 +399,8 @@ const ExpressionPlayground = () => {
               </p>
             </div>
             <JsonEditor
-              value={jsonData}
-              onChange={setJsonData}
+              value={state.jsonData}
+              onChange={handleJsonDataChange}
               placeholder="输入 JSON 数据..."
             />
           </div>
@@ -294,38 +416,10 @@ const ExpressionPlayground = () => {
               </p>
             </div>
             <VarsEditor
-              value={varsData}
-              onChange={setVarsData}
+              value={state.varsData}
+              onChange={handleVarsDataChange}
               placeholder="输入变量数据..."
             />
-          </div>
-        </div>
-      </div>
-
-      {/* 功能说明 */}
-      <div
-        style={{
-          marginTop: "32px",
-          padding: "16px",
-          backgroundColor: "#f8f9fa",
-          borderRadius: "8px",
-          border: "1px solid #e9ecef",
-        }}
-      >
-        <h4 style={{ margin: "0 0 12px 0", color: "#333", fontSize: "1rem" }}>💡 功能说明</h4>
-        <div style={{ fontSize: "13px", color: "#666", lineHeight: "1.5" }}>
-          <div style={{ marginBottom: "8px" }}>
-            <strong>🎯 独立演示：</strong> 每个演示案例都有专属的简单数据，便于理解和学习
-          </div>
-          <div style={{ marginBottom: "8px" }}>
-            <strong>🎯 自动补全：</strong> 输入 <code>{"{{ "}</code> 自动补全 <code>{" }}"}</code>
-            ，输入 <code>$</code> 显示变量提示
-          </div>
-          <div style={{ marginBottom: "8px" }}>
-            <strong>🛡️ 实时验证：</strong> 自动检测语法错误、安全威胁等，hover 错误查看详情
-          </div>
-          <div>
-            <strong>🚀 强大功能：</strong> 支持 JMESPath 查询、日期处理、数学函数、条件判断等
           </div>
         </div>
       </div>

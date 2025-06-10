@@ -32,18 +32,13 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) => {
   const { isValid, errors, warnings, metadata } = validation
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="h-full place-self-stretch overflow-hidden rounded-md border">
       {/* 验证状态头部 */}
       <div
-        style={{
-          padding: "12px",
-          borderBottom: "1px solid #e5e7eb",
-          backgroundColor: isValid && errors.length === 0 ? "#f0fdf4" : "#fef2f2",
-          borderRadius: "6px 6px 0 0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        className={tcx(
+          "flex h-10 items-center justify-between px-4",
+          isValid && errors.length === 0 ? "text-success-foreground" : "text-danger-foreground",
+        )}
       >
         <div
           className={tcx(
@@ -63,79 +58,39 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) => {
       {/* 验证结果内容 */}
       <div style={{ padding: "12px" }}>
         {errors.length === 0 && warnings.length === 0 ? (
-          <div
-            style={{
-              color: "#16a34a",
-              fontSize: "14px",
-              textAlign: "center",
-              padding: "20px",
-            }}
-          >
+          <div className="text-success-foreground text-center">
             ✨ 表达式安全有效，所有验证层检查通过
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div className="flex flex-col gap-3">
             {/* 错误列表 */}
             {errors.length > 0 && (
               <div>
-                <h4
-                  style={{
-                    margin: "0 0 8px 0",
-                    fontSize: "13px",
-                    color: "#dc2626",
-                    fontWeight: "600",
-                  }}
-                >
-                  🚨 错误 ({errors.length})
-                </h4>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
+                <h4 className="text-danger-foreground mb-2">🚨 错误 ({errors.length})</h4>
+                <div className="flex flex-col gap-1.5">
                   {errors.map((error, index) => (
                     <div
                       key={index}
-                      style={{
-                        padding: "8px 12px",
-                        backgroundColor: "#fef2f2",
-                        border: "1px solid #fecaca",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                      }}
+                      className="border-danger-foreground bg-danger-foreground/10 rounded-md border p-2"
                     >
-                      <div
-                        style={{
-                          color: "#dc2626",
-                          fontWeight: "500",
-                          marginBottom: "2px",
-                        }}
-                      >
+                      <div className="text-danger-foreground mb-1 font-medium">
                         [{error.layer}] {error.message}
                       </div>
                       {error.code && (
-                        <div style={{ color: "#9ca3af", fontSize: "11px" }}>
-                          错误代码: {error.code}
-                        </div>
+                        <div className="text-secondary-foreground">错误代码: {error.code}</div>
                       )}
                       {error.position && (
-                        <div style={{ color: "#9ca3af", fontSize: "11px" }}>
+                        <div className="text-secondary-foreground">
                           位置: {error.position.start}-{error.position.end}
                         </div>
                       )}
                       {error.suggestions && error.suggestions.length > 0 && (
-                        <div style={{ marginTop: "4px" }}>
-                          <div style={{ color: "#6b7280", fontSize: "11px" }}>建议:</div>
+                        <div className="mt-1">
+                          <div className="text-secondary-foreground">建议:</div>
                           {error.suggestions.map((suggestion, i) => (
                             <div
                               key={i}
-                              style={{
-                                color: "#059669",
-                                fontSize: "11px",
-                                marginLeft: "8px",
-                              }}
+                              className="text-success-foreground ml-2"
                             >
                               • {suggestion}
                             </div>
@@ -151,50 +106,21 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({ validation }) => {
             {/* 警告列表 */}
             {warnings.length > 0 && (
               <div>
-                <h4
-                  style={{
-                    margin: "0 0 8px 0",
-                    fontSize: "13px",
-                    color: "#d97706",
-                    fontWeight: "600",
-                  }}
-                >
-                  ⚠️ 警告 ({warnings.length})
-                </h4>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
+                <h4 className="text-warning-foreground mb-2">⚠️ 警告 ({warnings.length})</h4>
+                <div className="flex flex-col gap-1.5">
                   {warnings.map((warning, index) => (
                     <div
                       key={index}
-                      style={{
-                        padding: "8px 12px",
-                        backgroundColor: "#fffbeb",
-                        border: "1px solid #fed7aa",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                      }}
+                      className="border-warning-foreground bg-warning-foreground/10 rounded-md border p-2"
                     >
-                      <div
-                        style={{
-                          color: "#d97706",
-                          fontWeight: "500",
-                          marginBottom: "2px",
-                        }}
-                      >
+                      <div className="text-warning-foreground mb-1 font-medium">
                         [{warning.layer}] {warning.message}
                       </div>
                       {warning.code && (
-                        <div style={{ color: "#9ca3af", fontSize: "11px" }}>
-                          警告代码: {warning.code}
-                        </div>
+                        <div className="text-secondary-foreground">警告代码: {warning.code}</div>
                       )}
                       {warning.position && (
-                        <div style={{ color: "#9ca3af", fontSize: "11px" }}>
+                        <div className="text-secondary-foreground">
                           位置: {warning.position.start}-{warning.position.end}
                         </div>
                       )}

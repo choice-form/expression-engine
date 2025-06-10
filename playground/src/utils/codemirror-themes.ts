@@ -205,20 +205,33 @@ export const validationField = StateField.define<DecorationSet>({
           // 转换playground的validation格式为ValidationResult格式
           let convertedValidation: ValidationResult | undefined = undefined
           if (validation) {
+            // 识别系统级错误（覆盖整个模板的错误）
+            const isSystemError = (err: any) => {
+              return (
+                !err.position ||
+                (err.position.start === 0 && err.position.end === template.length) ||
+                ["VALIDATOR_ERROR", "TOO_MANY_ERRORS", "VALIDATION_ERROR"].includes(err.code)
+              )
+            }
+
             convertedValidation = {
               isValid: validation.isValid,
-              errors: (validation.errors || []).map((err: any) => ({
-                code: "CUSTOM_ERROR",
-                message: err.message,
-                severity: "error" as const,
-                position: err.position || { start: 0, end: template.length, line: 1, column: 1 },
-              })),
-              warnings: (validation.warnings || []).map((warn: any) => ({
-                code: "CUSTOM_WARNING",
-                message: warn.message,
-                severity: "warning" as const,
-                position: warn.position || { start: 0, end: template.length, line: 1, column: 1 },
-              })),
+              errors: (validation.errors || [])
+                .filter((err: any) => err.position && !isSystemError(err))
+                .map((err: any) => ({
+                  code: "CUSTOM_ERROR",
+                  message: err.message,
+                  severity: "error" as const,
+                  position: err.position,
+                })),
+              warnings: (validation.warnings || [])
+                .filter((warn: any) => warn.position && !isSystemError(warn))
+                .map((warn: any) => ({
+                  code: "CUSTOM_WARNING",
+                  message: warn.message,
+                  severity: "warning" as const,
+                  position: warn.position,
+                })),
             }
           }
 

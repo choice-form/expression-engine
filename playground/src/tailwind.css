@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @import "@choiceform/design-system/styles/theme.css";
 @import "@choiceform/design-system/styles/components.css";

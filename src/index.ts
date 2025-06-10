@@ -51,6 +51,18 @@ export { BaseValidator } from "./validation/base-validator.js"
 // 导出默认配置
 export { DEFAULT_CONFIG } from "./config/default-config.js"
 
+// 导出方法注册表（可选的扩展API）
+export {
+  MethodRegistry,
+  defaultMethodRegistry,
+  initializeLuxonMethods,
+} from "./validation/utils/method-registry.js"
+export type {
+  MethodInfo,
+  VariableInfo,
+  FunctionSignature,
+} from "./validation/utils/method-registry.js"
+
 // 导出完整建议系统 (替代旧的expression-suggestions)
 export { CompleteSuggestionProvider } from "./completion/complete-suggestions.js"
 export type {

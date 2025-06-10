@@ -25,18 +25,13 @@ const ResultPanel: React.FC<ResultPanelProps> = ({ result, outputFormat }) => {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="h-full place-self-stretch overflow-hidden rounded-md border">
       {/* 结果状态头部 */}
       <div
-        style={{
-          padding: "12px",
-          borderBottom: "1px solid #e5e7eb",
-          backgroundColor: result.success ? "#f0fdf4" : "#fef2f2",
-          borderRadius: "6px 6px 0 0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        className={tcx(
+          "flex h-10 items-center justify-between px-4",
+          result.success ? "text-success-foreground" : "text-danger-foreground",
+        )}
       >
         <div
           className={tcx(
@@ -57,44 +52,14 @@ const ResultPanel: React.FC<ResultPanelProps> = ({ result, outputFormat }) => {
           <div>
             {outputFormat === "string" ? (
               <div>
-                <h4
-                  style={{
-                    margin: "0 0 8px 0",
-                    fontSize: "13px",
-                    color: "#374151",
-                  }}
-                >
-                  字符串结果:
-                </h4>
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: "12px",
-                    backgroundColor: "#f9fafb",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "4px",
-                    fontSize: "12px",
-                    fontFamily: 'Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    maxHeight: "300px",
-                    overflow: "auto",
-                  }}
-                >
+                <h4 className="text-secondary-foreground mb-2">字符串结果:</h4>
+                <pre className="border-success-foreground bg-success-foreground/10 text-success-foreground rounded-md border p-2">
                   {formatValue(result.value)}
                 </pre>
               </div>
             ) : (
               <div>
-                <h4
-                  style={{
-                    margin: "0 0 8px 0",
-                    fontSize: "13px",
-                    color: "#374151",
-                  }}
-                >
-                  AST 结构:
-                </h4>
+                <h4 className="text-secondary-foreground mb-2">AST 结构:</h4>
                 <pre
                   style={{
                     margin: 0,
@@ -115,13 +80,7 @@ const ResultPanel: React.FC<ResultPanelProps> = ({ result, outputFormat }) => {
                 {result.value &&
                   typeof result.value === "object" &&
                   (result.value as any).complexity && (
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "12px",
-                        color: "#6b7280",
-                      }}
-                    >
+                    <div className="text-secondary-foreground">
                       复杂度: {(result.value as any).complexity} | 依赖:{" "}
                       {(result.value as any).dependencies?.join(", ") || "无"}
                     </div>
@@ -131,28 +90,11 @@ const ResultPanel: React.FC<ResultPanelProps> = ({ result, outputFormat }) => {
           </div>
         ) : (
           <div>
-            <h4
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: "13px",
-                color: "#dc2626",
-              }}
-            >
-              错误信息:
-            </h4>
-            <div
-              style={{
-                padding: "12px",
-                backgroundColor: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "4px",
-                fontSize: "12px",
-                color: "#dc2626",
-              }}
-            >
+            <h4 className="text-danger-foreground mb-2">错误信息:</h4>
+            <div className="border-danger-foreground bg-danger-foreground/10 rounded-md border p-2">
               {result.error?.message || "未知错误"}
               {result.error?.position && (
-                <div style={{ marginTop: "4px", fontSize: "11px" }}>
+                <div className="text-secondary-foreground">
                   位置: {result.error.position.start} - {result.error.position.end}
                 </div>
               )}

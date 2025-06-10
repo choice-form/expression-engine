@@ -10,6 +10,7 @@ interface ExpressionEditorProps {
   theme: "light" | "dark"
   value: string
   onChange: (value: string) => void
+  onCursorChange?: (position: number) => void
   validation: {
     isValid: boolean
     errors: Array<{
@@ -26,19 +27,27 @@ interface ExpressionEditorProps {
 const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   value,
   onChange,
+  onCursorChange,
   validation,
   theme,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView>()
   const onChangeRef = useRef(onChange)
+  const onCursorChangeRef = useRef(onCursorChange)
 
-  // 保持 onChange 引用稳定
+  // 保持回调引用稳定
   onChangeRef.current = onChange
+  onCursorChangeRef.current = onCursorChange
 
   // 稳定的 onChange 回调
   const stableOnChange = useCallback((newValue: string) => {
     onChangeRef.current(newValue)
+  }, [])
+
+  // 稳定的 onCursorChange 回调
+  const stableOnCursorChange = useCallback((position: number) => {
+    onCursorChangeRef.current?.(position)
   }, [])
 
   const { autoCloseExtension, autoCompleteExtension, validationExtension } = useExpressionEditor({
@@ -62,6 +71,11 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
                 stableOnChange(update.state.doc.toString())
+              }
+              // 监听光标位置变化
+              if (update.selectionSet && update.state.selection.main) {
+                const cursorPosition = update.state.selection.main.head
+                stableOnCursorChange(cursorPosition)
               }
             }),
           ],

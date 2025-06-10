@@ -15,254 +15,7 @@ import type {
   ValidationWarning,
 } from "../base-validator.js"
 import type { ParsedExpression, ExpressionContext } from "../../types/index.js"
-
-/**
- * 内置函数签名定义
- */
-interface FunctionSignature {
-  description: string
-  maxArgs?: number
-  minArgs: number
-  name: string
-  parameters: Array<{
-    description?: string
-    name: string
-    required: boolean
-    type: string
-  }>
-  returnType: string
-}
-
-/**
- * 内置函数库
- */
-const BUILTIN_FUNCTIONS: Record<string, FunctionSignature> = {
-  $if: {
-    name: "$if",
-    minArgs: 3,
-    maxArgs: 3,
-    parameters: [
-      { name: "condition", type: "any", required: true },
-      { name: "trueValue", type: "any", required: true },
-      { name: "falseValue", type: "any", required: true },
-    ],
-    returnType: "any",
-    description: "条件函数，根据条件返回不同的值",
-  },
-  $isEmpty: {
-    name: "$isEmpty",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "any", required: true }],
-    returnType: "boolean",
-    description: "检查值是否为空",
-  },
-  $isNotEmpty: {
-    name: "$isNotEmpty",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "any", required: true }],
-    returnType: "boolean",
-    description: "检查值是否不为空",
-  },
-  $length: {
-    name: "$length",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "array|string|object", required: true }],
-    returnType: "number",
-    description: "获取数组、字符串或对象的长度",
-  },
-  $keys: {
-    name: "$keys",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "object", type: "object", required: true }],
-    returnType: "array",
-    description: "获取对象的所有键",
-  },
-  $values: {
-    name: "$values",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "object", type: "object", required: true }],
-    returnType: "array",
-    description: "获取对象的所有值",
-  },
-  $upper: {
-    name: "$upper",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "string", type: "string", required: true }],
-    returnType: "string",
-    description: "将字符串转换为大写",
-  },
-  $lower: {
-    name: "$lower",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "string", type: "string", required: true }],
-    returnType: "string",
-    description: "将字符串转换为小写",
-  },
-  $number: {
-    name: "$number",
-    minArgs: 1,
-    maxArgs: 2,
-    parameters: [
-      { name: "value", type: "any", required: true },
-      { name: "decimalPlaces", type: "number", required: false },
-    ],
-    returnType: "number",
-    description: "将值转换为数字",
-  },
-  jmespath: {
-    name: "jmespath",
-    minArgs: 2,
-    maxArgs: 2,
-    parameters: [
-      { name: "data", type: "object|array", required: true },
-      { name: "query", type: "string", required: true },
-    ],
-    returnType: "any",
-    description: "JMESPath查询函数，用于从JSON数据中提取值",
-  },
-  search: {
-    name: "search",
-    minArgs: 2,
-    maxArgs: 2,
-    parameters: [
-      { name: "data", type: "object|array", required: true },
-      { name: "query", type: "string", required: true },
-    ],
-    returnType: "any",
-    description: "JMESPath搜索函数，等同于jmespath函数",
-  },
-}
-
-/**
- * Math函数库
- */
-const MATH_FUNCTIONS: Record<string, FunctionSignature> = {
-  abs: {
-    name: "Math.abs",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "number", required: true }],
-    returnType: "number",
-    description: "返回数字的绝对值",
-  },
-  round: {
-    name: "Math.round",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "number", required: true }],
-    returnType: "number",
-    description: "四舍五入到最近的整数",
-  },
-  floor: {
-    name: "Math.floor",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "number", required: true }],
-    returnType: "number",
-    description: "向下取整",
-  },
-  ceil: {
-    name: "Math.ceil",
-    minArgs: 1,
-    maxArgs: 1,
-    parameters: [{ name: "value", type: "number", required: true }],
-    returnType: "number",
-    description: "向上取整",
-  },
-  max: {
-    name: "Math.max",
-    minArgs: 1,
-    maxArgs: Infinity,
-    parameters: [{ name: "values", type: "number", required: true }],
-    returnType: "number",
-    description: "返回最大值",
-  },
-  min: {
-    name: "Math.min",
-    minArgs: 1,
-    maxArgs: Infinity,
-    parameters: [{ name: "values", type: "number", required: true }],
-    returnType: "number",
-    description: "返回最小值",
-  },
-}
-
-/**
- * 标准变量定义
- */
-const STANDARD_VARIABLES = new Set([
-  "$json",
-  "$item",
-  "$node",
-  "$vars",
-  "$now",
-  "$today",
-  "$workflow",
-  "$execution",
-  "$binary",
-  "$input",
-  "$runIndex",
-  "$itemIndex",
-  // 内置函数
-  "$if",
-  "$isEmpty",
-  "$isNotEmpty",
-  "$ifEmpty",
-  "$number",
-  "$string",
-  "$boolean",
-  "$upper",
-  "$lower",
-  "$trim",
-  "$uuid",
-  "$timestamp",
-  "$formatDate",
-  "$groupBy",
-  "$sort",
-  "$join",
-  "$map",
-  "$filter",
-  "$reduce",
-  "$sum",
-  "$min",
-  "$max",
-  "$avg",
-  "$count",
-  "$unique",
-  "$first",
-  "$last",
-  "$nth",
-  "$length",
-  "$reverse",
-  "$flatten",
-  "$compact",
-  "$chunk",
-  "$zip",
-  "$unzip",
-  "$keys",
-  "$values",
-  "$pairs",
-  "$fromPairs",
-  "$merge",
-  "$pick",
-  "$omit",
-  "$clone",
-  "$isArray",
-  "$isObject",
-  "$isString",
-  "$isNumber",
-  "$isBoolean",
-  "$isNull",
-  "$isUndefined",
-  "$isDefined",
-])
+import { defaultMethodRegistry, type FunctionSignature } from "../utils/method-registry.js"
 
 /**
  * 变量依赖检查器
@@ -279,77 +32,22 @@ export class VariableDependencyValidator extends BaseValidator {
   private static readonly PROPERTY_ACCESS_SIMPLE_REGEX =
     /\$[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*/g
 
-  // 性能优化：预创建内置方法Set
-  private static readonly ARRAY_METHODS = new Set([
-    "length",
-    "map",
-    "filter",
-    "reduce",
-    "forEach",
-    "find",
-    "findIndex",
-    "includes",
-    "indexOf",
-    "lastIndexOf",
-    "join",
-    "slice",
-    "splice",
-    "push",
-    "pop",
-    "shift",
-    "unshift",
-    "reverse",
-    "sort",
-    "concat",
-    "every",
-    "some",
-    "flat",
-    "flatMap",
-    "fill",
-    "copyWithin",
-  ])
+  // 获取方法注册表的方法集合（懒加载）
+  private getArrayMethods(): Set<string> {
+    return new Set(defaultMethodRegistry.getMethodsByType("array").map((m) => m.name))
+  }
 
-  private static readonly STRING_METHODS = new Set([
-    "length",
-    "charAt",
-    "charCodeAt",
-    "substring",
-    "substr",
-    "slice",
-    "toLowerCase",
-    "toUpperCase",
-    "trim",
-    "split",
-    "replace",
-    "match",
-    "search",
-    "indexOf",
-    "lastIndexOf",
-    "includes",
-    "startsWith",
-    "endsWith",
-    "padStart",
-    "padEnd",
-    "repeat",
-    "localeCompare",
-  ])
+  private getStringMethods(): Set<string> {
+    return new Set(defaultMethodRegistry.getMethodsByType("string").map((m) => m.name))
+  }
 
-  private static readonly NUMBER_METHODS = new Set([
-    "toString",
-    "toFixed",
-    "toExponential",
-    "toPrecision",
-    "valueOf",
-  ])
+  private getNumberMethods(): Set<string> {
+    return new Set(defaultMethodRegistry.getMethodsByType("number").map((m) => m.name))
+  }
 
-  private static readonly OBJECT_METHODS = new Set([
-    "toString",
-    "valueOf",
-    "hasOwnProperty",
-    "isPrototypeOf",
-    "propertyIsEnumerable",
-    "toLocaleString",
-  ])
+  private getObjectMethods(): Set<string> {
+    return new Set(defaultMethodRegistry.getMethodsByType("object").map((m) => m.name))
+  }
 
   // 添加缓存机制
   private readonly propertyPathCache = new Map<string, string[]>()
@@ -521,8 +219,8 @@ export class VariableDependencyValidator extends BaseValidator {
    * 检查变量是否可用
    */
   private isVariableAvailable(variable: string, context?: Partial<ExpressionContext>): boolean {
-    // 检查标准变量
-    if (STANDARD_VARIABLES.has(variable)) {
+    // 检查已注册的变量
+    if (defaultMethodRegistry.isKnownVariable(variable)) {
       return true
     }
 
@@ -531,13 +229,8 @@ export class VariableDependencyValidator extends BaseValidator {
       return true
     }
 
-    // 检查是否是Math对象
-    if (variable === "Math") {
-      return true
-    }
-
-    // 检查是否是DateTime对象
-    if (variable === "DateTime") {
+    // 检查是否是特殊全局对象
+    if (variable === "Math" || variable === "DateTime") {
       return true
     }
 
@@ -548,11 +241,7 @@ export class VariableDependencyValidator extends BaseValidator {
    * 检查变量是否已弃用
    */
   private isDeprecatedVariable(variable: string): boolean {
-    const deprecatedVariables = new Set([
-      "$binary", // 建议使用 $item.binary
-    ])
-
-    return deprecatedVariables.has(variable)
+    return defaultMethodRegistry.isDeprecatedVariable(variable)
   }
 
   /**
@@ -711,36 +400,46 @@ export class VariableDependencyValidator extends BaseValidator {
   private hashContext(context?: Partial<ExpressionContext>): string {
     if (!context) return "empty"
 
-    // 只哈希相关的属性，提高缓存命中率
-    const relevantData = {
-      $json: context.$json,
-      $vars: context.$vars,
-      $node: context.$node,
-      $item: context.$item,
-    }
+    try {
+      // 只哈希相关的属性，提高缓存命中率
+      const relevantData = {
+        $json: context.$json,
+        $vars: context.$vars,
+        $node: context.$node,
+        $item: context.$item,
+      }
 
-    return JSON.stringify(relevantData).slice(0, 50) // 限制长度
+      return JSON.stringify(relevantData).slice(0, 50) // 限制长度
+    } catch (error) {
+      // 如果JSON.stringify失败（比如循环引用），生成备用哈希
+      const keys = Object.keys(context)
+      const types = keys.map((key) => {
+        const value = context[key as keyof ExpressionContext]
+        return typeof value
+      })
+      return `fallback:${keys.join(",")}-${types.join(",")}`
+    }
   }
 
   /**
-   * 检查是否是内置方法或属性（性能大幅优化版）
+   * 检查是否是内置方法或属性（使用方法注册表）
    */
   private isBuiltinMethod(value: any, property: string): boolean {
-    // 使用预创建的Set，避免每次调用都创建新对象
+    // 使用方法注册表的方法集合
     if (Array.isArray(value)) {
-      return VariableDependencyValidator.ARRAY_METHODS.has(property)
+      return this.getArrayMethods().has(property)
     }
 
     if (typeof value === "string") {
-      return VariableDependencyValidator.STRING_METHODS.has(property)
+      return this.getStringMethods().has(property)
     }
 
     if (typeof value === "number") {
-      return VariableDependencyValidator.NUMBER_METHODS.has(property)
+      return this.getNumberMethods().has(property)
     }
 
     // 对象的通用方法
-    return VariableDependencyValidator.OBJECT_METHODS.has(property)
+    return this.getObjectMethods().has(property)
   }
 
   /**
@@ -897,20 +596,16 @@ export class FunctionParameterValidator extends BaseValidator {
     const errors: Array<{ code: string; message: string }> = []
     const warnings: Array<{ code: string; message: string }> = []
 
+    // 使用方法注册表获取函数签名
     let signature: FunctionSignature | undefined
 
-    // 检查内置函数
-    if (func.name.startsWith("$")) {
-      signature = BUILTIN_FUNCTIONS[func.name]
-    }
-    // 检查Math函数
-    else if (func.name.startsWith("Math.")) {
+    // 直接从注册表获取
+    signature = defaultMethodRegistry.getFunctionSignature(func.name)
+
+    // 如果是 Math 函数但没找到，尝试用简短名称查找
+    if (!signature && func.name.startsWith("Math.")) {
       const mathFunc = func.name.substring(5) // 移除 'Math.' 前缀
-      signature = MATH_FUNCTIONS[mathFunc]
-    }
-    // 检查其他已知函数（jmespath等）
-    else {
-      signature = BUILTIN_FUNCTIONS[func.name]
+      signature = defaultMethodRegistry.getFunctionSignature(mathFunc)
     }
 
     if (signature) {
@@ -1102,81 +797,8 @@ export class FunctionParameterValidator extends BaseValidator {
    * 检查是否是已知的全局函数
    */
   private isKnownGlobalFunction(name: string): boolean {
-    const knownGlobals = new Set([
-      "parseInt",
-      "parseFloat",
-      "isNaN",
-      "isFinite",
-      "String",
-      "Number",
-      "Boolean",
-      "Array",
-      "Object",
-      "JSON.parse",
-      "JSON.stringify",
-      "encodeURIComponent",
-      "decodeURIComponent",
-      // 常见的数组方法
-      "concat",
-      "every",
-      "filter",
-      "find",
-      "findIndex",
-      "findLast",
-      "findLastIndex",
-      "forEach",
-      "includes",
-      "indexOf",
-      "join",
-      "lastIndexOf",
-      "map",
-      "pop",
-      "push",
-      "reduce",
-      "reverse",
-      "shift",
-      "slice",
-      "some",
-      "sort",
-      "splice",
-      "unshift",
-      // 常见的字符串方法
-      "substring",
-      "substr",
-      "toLowerCase",
-      "toUpperCase",
-      "trim",
-      "split",
-      "replace",
-      "match",
-      // 常见的对象方法
-      "hasOwnProperty",
-      "toString",
-      "valueOf",
-      // DateTime/Luxon 方法
-      "toFormat",
-      "toISO",
-      "toISODate",
-      "toISOTime",
-      "toLocaleString",
-      "plus",
-      "minus",
-      "startOf",
-      "endOf",
-      "diff",
-      "equals",
-      "hasSame",
-      "setZone",
-      "toUTC",
-      "fromISO",
-      "fromFormat",
-      "fromMillis",
-      "fromSeconds",
-      "fromJSDate",
-      "now",
-    ])
-
-    return knownGlobals.has(name)
+    // 使用方法注册表检查
+    return defaultMethodRegistry.isKnownMethod(name)
   }
 }
 
