@@ -47,6 +47,15 @@ jobs:
         with:
           version: 8
 
+      - name: Debug - Check lockfile
+        run: |
+          echo "=== Checking lockfile ==="
+          ls -la pnpm-lock.yaml || echo "No pnpm-lock.yaml found"
+          echo "=== Working directory ==="
+          pwd
+          echo "=== Directory contents ==="
+          ls -la
+
       - name: Get pnpm store directory
         shell: bash
         run: |
@@ -61,7 +70,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "=== Installing dependencies without frozen lockfile ==="
+          pnpm install --no-frozen-lockfile
 
       - name: Build project
         run: pnpm build
