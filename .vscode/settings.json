@@ -30,5 +30,6 @@
     "*.css": "tailwindcss"
   },
   "tailwindCSS.classFunctions": ["tcx", "tv"],
-  "prettier.requireConfig": true
+  "prettier.requireConfig": true,
+  "cSpell.words": ["callsites", "jmespath", "jssha", "keymap", "lezer", "luxon"]
 }

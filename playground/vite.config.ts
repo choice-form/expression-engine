@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite"
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('development'), 
+  },
   base: "/expression-engine/", // 改为主仓库名称
   resolve: {
     alias: {

@@ -3,7 +3,6 @@
 
 @import "@choiceform/design-system/styles/theme.css";
 @import "@choiceform/design-system/styles/components.css";
-
 @source "../node_modules/@choiceform/design-system";
 
 .cm-editor.cm-focused {
@@ -23,4 +22,32 @@
 .expression-error {
   background-color: #fef2f2 !important; /* 浅红背景 */
   color: #dc2626 !important; /* 红色 */
+}
+
+:root {
+  --color-valid-resolvable-foreground: #16a34a;
+  --color-valid-resolvable-background: #f0fdf4;
+  --color-invalid-resolvable-foreground: #dc2626;
+  --color-invalid-resolvable-background: #fef2f2;
+  --color-pending-resolvable-foreground: #d97706;
+  --color-pending-resolvable-background: #fef2f2;
+
+  --font-family-monospace: "JetBrains Mono", "SF Mono", "Menlo", "Monaco", "Consolas", "monospace";
+  --input-font-color: #374151;
+  --color-text-dark: #374151;
+  --color-code-caret: #374151;
+  --font-size-2xs: 12px;
+  --spacing-2xs: 4px;
+  --border-width-base: 1px;
+  --input-border-style: solid;
+  --border-style-base: solid;
+  --input-border-color: #e5e7eb;
+  --border-color-base: #e5e7eb;
+  --input-border-right-color: #e5e7eb;
+  --input-border-radius: 4px;
+  --border-radius-base: 4px;
+  --input-border-top-right-radius: 0;
+  --input-border-bottom-right-radius: 0;
+
+  --color-code-caret: #374151;
 }
