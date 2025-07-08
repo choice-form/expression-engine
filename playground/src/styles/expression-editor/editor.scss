@@ -1,0 +1,47 @@
+@use "../variables/functions" as fn;
+@use "../variables/mixins" as mx;
+@use "../variables/variables" as *;
+
+.cm-editor {
+  & .cm-line {
+    padding: 0;
+  }
+  & .cm-content {
+    padding-left: 0.5rem;
+    font-family: var(--font-mono);
+  }
+  & .cm-valid-resolvable {
+    border-radius: 2px;
+    background-color: fn.color-mix(fn.get-foreground("success"), 10);
+    padding: 0 2px;
+    color: fn.get-foreground("success");
+  }
+
+  & .cm-lintRange-error,
+  & .cm-invalid-resolvable {
+    border-radius: 2px;
+    background-color: fn.color-mix(fn.get-foreground("danger"), 10);
+    padding: 0 2px;
+    color: fn.get-foreground("danger");
+  }
+
+  & .cm-lintRange-error {
+    background-image: none;
+  }
+
+  & .cm-pending-resolvable {
+    border-radius: 2px;
+    background-color: fn.color-mix(fn.get-foreground("secondary"), 10);
+    padding: 0 2px;
+    color: fn.get-foreground("secondary");
+  }
+  
+  &.cm-focused {
+    &:focus {
+      outline: none;
+    }
+    .cm-matchingBracket {
+      background-color: transparent !important;
+    }
+  }
+}

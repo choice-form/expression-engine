@@ -1,0 +1,514 @@
+@use "sass:math";
+@use "sass:map";
+@use "sass:string";
+@use "sass:meta";
+
+// ============================================================================
+// 颜色映射 Maps
+// ============================================================================
+
+$colors: (
+  "blue": (
+    100: var(--blue-100),
+    200: var(--blue-200),
+    300: var(--blue-300),
+    400: var(--blue-400),
+    500: var(--blue-500),
+    600: var(--blue-600),
+    700: var(--blue-700),
+    800: var(--blue-800),
+    900: var(--blue-900),
+    950: var(--blue-950),
+  ),
+  "violet": (
+    100: var(--vlolet-100),
+    200: var(--vlolet-200),
+    300: var(--vlolet-300),
+    400: var(--vlolet-400),
+    500: var(--vlolet-500),
+    600: var(--vlolet-600),
+    700: var(--vlolet-700),
+    800: var(--vlolet-800),
+    900: var(--vlolet-900),
+    950: var(--vlolet-950),
+  ),
+  "purple": (
+    100: var(--purple-100),
+    200: var(--purple-200),
+    300: var(--purple-300),
+    400: var(--purple-400),
+    500: var(--purple-500),
+    600: var(--purple-600),
+    700: var(--purple-700),
+    800: var(--purple-800),
+    900: var(--purple-900),
+    950: var(--purple-950),
+  ),
+  "pink": (
+    100: var(--pink-100),
+    200: var(--pink-200),
+    300: var(--pink-300),
+    400: var(--pink-400),
+    500: var(--pink-500),
+    600: var(--pink-600),
+    700: var(--pink-700),
+    800: var(--pink-800),
+    900: var(--pink-900),
+    950: var(--pink-950),
+  ),
+  "teal": (
+    100: var(--teal-100),
+    200: var(--teal-200),
+    300: var(--teal-300),
+    400: var(--teal-400),
+    500: var(--teal-500),
+    600: var(--teal-600),
+    700: var(--teal-700),
+    800: var(--teal-800),
+    900: var(--teal-900),
+    950: var(--teal-950),
+  ),
+  "red": (
+    100: var(--red-100),
+    200: var(--red-200),
+    300: var(--red-300),
+    400: var(--red-400),
+    500: var(--red-500),
+    600: var(--red-600),
+    700: var(--red-700),
+    800: var(--red-800),
+    900: var(--red-900),
+    950: var(--red-950),
+  ),
+  "orange": (
+    100: var(--orange-100),
+    200: var(--orange-200),
+    300: var(--orange-300),
+    400: var(--orange-400),
+    500: var(--orange-500),
+    600: var(--orange-600),
+    700: var(--orange-700),
+    800: var(--orange-800),
+    900: var(--orange-900),
+    950: var(--orange-950),
+  ),
+  "yellow": (
+    100: var(--yellow-100),
+    200: var(--yellow-200),
+    300: var(--yellow-300),
+    400: var(--yellow-400),
+    500: var(--yellow-500),
+    600: var(--yellow-600),
+    700: var(--yellow-700),
+    800: var(--yellow-800),
+    900: var(--yellow-900),
+    950: var(--yellow-950),
+  ),
+  "green": (
+    100: var(--green-100),
+    200: var(--green-200),
+    300: var(--green-300),
+    400: var(--green-400),
+    500: var(--green-500),
+    600: var(--green-600),
+    700: var(--green-700),
+    800: var(--green-800),
+    900: var(--green-900),
+    950: var(--green-950),
+  ),
+);
+
+// 灰色系映射
+$grays: (
+  100: var(--color-gray-100),
+  200: var(--color-gray-200),
+  300: var(--color-gray-300),
+  400: var(--color-gray-400),
+  500: var(--color-gray-500),
+  600: var(--color-gray-600),
+  700: var(--color-gray-700),
+  800: var(--color-gray-800),
+  900: var(--color-gray-900),
+  950: var(--color-gray-950),
+);
+
+// 字体大小映射
+$text-sizes: (
+  sm: var(--text-sm),
+  md: var(--text-md),
+  lg: var(--text-lg),
+  xl: var(--text-xl),
+);
+
+// 字体粗细映射
+$text-weights: (
+  base: var(--font-weight-base),
+  medium: var(--font-weight-medium),
+);
+
+// 圆角映射
+$radius-sizes: (
+  sm: var(--radius-sm),
+  md: var(--radius-md),
+  lg: var(--radius-lg),
+);
+
+// 行高映射
+$leading-sizes: (
+  sm: var(--leading-sm),
+  md: var(--leading-md),
+  lg: var(--leading-lg),
+);
+
+// 字间距映射
+$tracking-sizes: (
+  sm: var(--tracking-sm),
+  md: var(--tracking-md),
+  lg: var(--tracking-lg),
+);
+
+// 阴影映射
+$shadow-sizes: (
+  xs: var(--shadow-xs),
+  sm: var(--shadow-sm),
+  md: var(--shadow-md),
+  lg: var(--shadow-lg),
+  xl: var(--shadow-xl),
+  focus: var(--shadow-focus),
+);
+
+// Z-index 映射
+$z-indexes: (
+  sticky: var(--z-index-sticky),
+  fixed: var(--z-index-fixed),
+  backdrop: var(--z-index-backdrop),
+  modals: var(--z-index-modals),
+  popover: var(--z-index-popover),
+  menu: var(--z-index-menu),
+  tooltip: var(--z-index-tooltip),
+  notification: var(--z-index-notification),
+  scroll: var(--z-index-scroll),
+);
+
+// ============================================================================
+// 颜色相关函数
+// ============================================================================
+
+/// 获取主题颜色
+/// @param {String} $color-name - 颜色名称 (blue, red, green, etc.)
+/// @param {Number|String} $shade - 色阶 (100, 200, 300, 400, 500, 600, 700, 800, 900, 950)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .button {
+///     background: get-color("blue", 500); // var(--blue-500)
+///     background: get-color("blue", "500"); // var(--blue-500)
+///     border-color: get-color("blue", 600); // var(--blue-600)
+///   }
+@function get-color($color-name, $shade: 500) {
+  @if not map.has-key($colors, $color-name) {
+    @error "颜色 '#{$color-name}' 不存在。可用颜色: #{map.keys($colors)}";
+  }
+
+  $color-map: map.get($colors, $color-name);
+  // 将字符串转换为数字
+  $numeric-shade: if(meta.type-of($shade) == "string", 0 + $shade, $shade);
+
+  @if not map.has-key($color-map, $numeric-shade) {
+    @error "色阶 '#{$shade}' 不存在于颜色 '#{$color-name}' 中。可用色阶: #{map.keys($color-map)}";
+  }
+
+  @return map.get($color-map, $numeric-shade);
+}
+
+/// 获取灰色
+/// @param {Number|String} $shade - 灰色色阶 (100, 200, 300, 400, 500, 600, 700, 800, 900, 950)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .text {
+///     color: get-gray(800); // var(--color-gray-800)
+///     color: get-gray("800"); // var(--color-gray-800)
+///   }
+@function get-gray($shade: 500) {
+  // 将字符串转换为数字
+  $numeric-shade: if(meta.type-of($shade) == "string", 0 + $shade, $shade);
+
+  @if not map.has-key($grays, $numeric-shade) {
+    @error "灰色色阶 '#{$shade}' 不存在。可用色阶: #{map.keys($grays)}";
+  }
+
+  @return map.get($grays, $numeric-shade);
+}
+
+/// 获取语义化前景色
+/// @param {String} $variant - 变体 (default, secondary, tertiary, accent, success, warning, danger, assistive, component, disabled)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .text {
+///     color: get-foreground("default"); // var(--foreground-default)
+///     color: get-foreground("disabled"); // var(--color-disabled-foreground)
+///   }
+@function get-foreground($variant: "default") {
+  $foreground-map: (
+    "default": var(--foreground-default),
+    "disabled": var(--foreground-tertiary),
+    "secondary": var(--foreground-secondary),
+    "tertiary": var(--foreground-tertiary),
+    "accent": var(--foreground-accent),
+    "success": var(--foreground-success),
+    "warning": var(--foreground-warning),
+    "danger": var(--foreground-danger),
+    "assistive": var(--foreground-assistive),
+    "component": var(--foreground-component),
+    "on-accent": var(--color-white),
+    "on-accent-secondary": rgba(255, 255, 255, 0.8),
+    "on-accent-tertiary": rgba(255, 255, 255, 0.4),
+    "edge-vertical": var(--color-edge-vertical),
+  );
+
+  @if not map.has-key($foreground-map, $variant) {
+    @error "前景色变体 '#{$variant}' 不存在。可用变体: #{map.keys($foreground-map)}";
+  }
+
+  @return map.get($foreground-map, $variant);
+}
+
+/// 获取语义化背景色
+/// @param {String} $variant - 变体 (default, secondary, secondary-active, selected, disabled)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .card {
+///     background: get-background("default"); // var(--background-default)
+///   }
+@function get-background($variant: "default") {
+  $background-map: (
+    "default": var(--background-default),
+    "disabled": var(--background-disabled),
+    "secondary": var(--background-secondary),
+    "secondary-active": var(--background-secondary-active),
+    "selected": var(--background-selected),
+    "accent": var(--blue-500),
+    "accent-active": var(--blue-600),
+    "success": var(--green-500),
+    "success-active": var(--green-600),
+    "warning": var(--yellow-500),
+    "warning-active": var(--yellow-600),
+    "danger": var(--red-500),
+    "danger-active": var(--red-600),
+    "assistive": var(--pink-500),
+    "assistive-active": var(--pink-600),
+    "component": var(--purple-500),
+    "component-active": var(--purple-600),
+    "menu": var(--color-gray-900),
+    "toolbar": var(--color-gray-800),
+  );
+
+  @if not map.has-key($background-map, $variant) {
+    @error "背景色变体 '#{$variant}' 不存在。可用变体: #{map.keys($background-map)}";
+  }
+
+  @return map.get($background-map, $variant);
+}
+
+/// 获取语义化边框色
+/// @param {String} $variant - 变体 (default, strong, selected-strong)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .input {
+///     border-color: get-border("default"); // var(--boundary-default)
+///   }
+@function get-border($variant: "default") {
+  $boundary-map: (
+    "default": var(--boundary-default),
+    "strong": var(--boundary-strong),
+    "selected": var(--blue-500),
+    "selected-strong": var(--boundary-selected-strong),
+    "menu": var(--color-gray-700),
+  );
+
+  @if not map.has-key($boundary-map, $variant) {
+    @error "边框色变体 '#{$variant}' 不存在。可用变体: #{map.keys($boundary-map)}";
+  }
+
+  @return map.get($boundary-map, $variant);
+}
+
+// ============================================================================
+// 尺寸和间距相关函数
+// ============================================================================
+
+/// 获取字体大小
+/// @param {String} $size - 尺寸 (sm, md, lg, xl)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .title {
+///     font-size: get-text-size("xl"); // var(--text-xl)
+///   }
+@function get-text-size($size: "md") {
+  @if not map.has-key($text-sizes, $size) {
+    @error "字体大小 '#{$size}' 不存在。可用尺寸: #{map.keys($text-sizes)}";
+  }
+
+  @return map.get($text-sizes, $size);
+}
+
+/// 获取字体粗细
+/// @param {String} $size - 尺寸 (sm, md, lg, xl)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .title {
+///     font-weight: get-text-weight("medium"); // var(--font-weight-medium)
+///   }
+@function get-text-weight($weight: "base") {
+  @if not map.has-key($text-weights, $weight) {
+    @error "字体粗细 '#{$weight}' 不存在。可用粗细: #{map.keys($text-weights)}";
+  }
+
+  @return map.get($text-weights, $weight);
+}
+
+/// 获取圆角
+/// @param {String} $size - 尺寸 (sm, md, lg)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .button {
+///     border-radius: get-radius("md"); // var(--radius-md)
+///   }
+@function get-radius($size: "md") {
+  @if not map.has-key($radius-sizes, $size) {
+    @error "圆角尺寸 '#{$size}' 不存在。可用尺寸: #{map.keys($radius-sizes)}";
+  }
+
+  @return map.get($radius-sizes, $size);
+}
+
+/// 获取行高
+/// @param {String} $size - 尺寸 (sm, md, lg)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .text {
+///     line-height: get-leading("md"); // var(--leading-md)
+///   }
+@function get-leading($size: "md") {
+  @if not map.has-key($leading-sizes, $size) {
+    @error "行高尺寸 '#{$size}' 不存在。可用尺寸: #{map.keys($leading-sizes)}";
+  }
+
+  @return map.get($leading-sizes, $size);
+}
+
+/// 获取字间距
+/// @param {String} $size - 尺寸 (sm, md, lg)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .text {
+///     letter-spacing: get-tracking("md"); // var(--tracking-md)
+///   }
+@function get-tracking($size: "md") {
+  @if not map.has-key($tracking-sizes, $size) {
+    @error "字间距尺寸 '#{$size}' 不存在。可用尺寸: #{map.keys($tracking-sizes)}";
+  }
+
+  @return map.get($tracking-sizes, $size);
+}
+
+/// 获取阴影
+/// @param {String} $size - 尺寸 (xs, sm, md, lg, xl, focus)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .card {
+///     box-shadow: get-shadow("md"); // var(--shadow-md)
+///     box-shadow: get-shadow("focus"); // var(--shadow-focus)
+///   }
+@function get-shadow($size: "md") {
+  @if not map.has-key($shadow-sizes, $size) {
+    @error "阴影尺寸 '#{$size}' 不存在。可用尺寸: #{map.keys($shadow-sizes)}";
+  }
+
+  @return map.get($shadow-sizes, $size);
+}
+
+/// 获取 Z-index
+/// @param {String} $layer - 层级 (sticky, fixed, backdrop, modals, popover, menu, tooltip, notification, scroll)
+/// @return {String} CSS 自定义属性
+/// @example scss - 使用示例
+///   .modal {
+///     z-index: get-z-index("modals"); // var(--z-index-modals)
+///   }
+@function get-z-index($layer) {
+  @if not map.has-key($z-indexes, $layer) {
+    @error "Z-index 层级 '#{$layer}' 不存在。可用层级: #{map.keys($z-indexes)}";
+  }
+
+  @return map.get($z-indexes, $layer);
+}
+
+// ============================================================================
+// 便捷组合函数
+// ============================================================================
+
+/// 获取完整的文本样式
+/// @param {String} $size - 字体大小 (sm, md, lg, xl)
+/// @param {String} $leading - 行高 (sm, md, lg)
+/// @param {String} $tracking - 字间距 (sm, md, lg)
+/// @return {Map} 包含字体样式的映射
+/// @example scss - 使用示例
+///   .text {
+///     @include apply-text-style(get-text-style("lg", "lg", "md"));
+///   }
+@function get-text-style($size: "md", $leading: "md", $tracking: "md") {
+  @return (
+    font-size: get-text-size($size),
+    line-height: get-leading($leading),
+    letter-spacing: get-tracking($tracking)
+  );
+}
+
+/// 获取完整的边框样式
+/// @param {String} $width - 边框宽度
+/// @param {String} $style - 边框样式
+/// @param {String} $color-variant - 边框颜色变体
+/// @return {String} 完整的边框声明
+/// @example scss - 使用示例
+///   .input {
+///     border: get-border-style("1px", "solid", "default");
+///   }
+@function get-border-style($width: "1px", $style: "solid", $color-variant: "default") {
+  @return #{$width} #{$style} #{get-border($color-variant)};
+}
+
+// ============================================================================
+// 工具函数
+// ============================================================================
+
+/// 检查颜色是否存在
+/// @param {String} $color-name - 颜色名称
+/// @return {Boolean} 是否存在
+@function color-exists($color-name) {
+  @return map.has-key($colors, $color-name);
+}
+
+/// 获取所有可用的颜色名称
+/// @return {List} 颜色名称列表
+@function get-color-names() {
+  @return map.keys($colors);
+}
+
+/// 获取指定颜色的所有色阶
+/// @param {String} $color-name - 颜色名称
+/// @return {List} 色阶列表
+@function get-color-shades($color-name) {
+  @if not map.has-key($colors, $color-name) {
+    @error "颜色 '#{$color-name}' 不存在";
+  }
+
+  @return map.keys(map.get($colors, $color-name));
+}
+
+/// 构造 color-mix() 语法
+/// @param {String} $color - 要混合的颜色（可以是 CSS 变量、rgba、hex 等）
+/// @param {Number} $percent - $color 所占百分比（0~100）
+/// @param {String} $other - 另一种颜色，默认 transparent
+/// @return {String} color-mix() 字符串
+@function color-mix($color, $percent, $other: transparent) {
+  @return string.unquote("color-mix(in srgb, #{$color} #{$percent}%, #{$other})");
+}

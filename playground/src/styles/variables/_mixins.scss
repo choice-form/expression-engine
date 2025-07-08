@@ -1,0 +1,406 @@
+@use "sass:math";
+@use "sass:map";
+@use "functions" as fn;
+
+// ============================================================================
+// 文本相关 Mixins
+// ============================================================================
+
+/// 单行文本省略号
+/// @example scss - 使用示例
+///   .title {
+///     @include text-ellipsis;
+///   }
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// 多行文本省略号
+/// @param {Number} $lines - 显示的行数，默认为 2
+/// @example scss - 使用示例
+///   .description {
+///     @include text-ellipsis-multiline(3);
+///   }
+@mixin text-ellipsis-multiline($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/// 文本样式组合
+/// @param {String} $size - 字体大小 (sm, md, lg, xl)
+/// @param {String} $weight - 字体粗细 (base, medium)
+/// @param {String} $leading - 行高 (sm, md, lg)
+/// @param {String} $tracking - 字间距 (sm, md, lg)
+/// @example scss - 使用示例
+///   .heading {
+///     @include text-style("xl", "medium", "lg", "md");
+///   }
+@mixin text-style($size: "md", $weight: "base", $leading: "md", $tracking: "md") {
+  font-weight: if($weight == "medium", var(--font-weight-medium), var(--font-weight-base));
+  font-size: fn.get-text-size($size);
+  line-height: fn.get-leading($leading);
+  letter-spacing: fn.get-tracking($tracking);
+}
+
+/// 无选择文本
+/// @example scss - 使用示例
+///   .no-select {
+///     @include no-select;
+///   }
+@mixin no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+// ============================================================================
+// 布局相关 Mixins
+// ============================================================================
+
+/// Flexbox 居中
+/// @param {String} $direction - flex 方向，默认为 row
+/// @example scss - 使用示例
+///   .center {
+///     @include flex-center;
+///   }
+@mixin flex-center($direction: row) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: center;
+  align-items: center;
+}
+
+/// Flexbox 布局
+/// @param {String} $direction - flex 方向
+/// @param {String} $justify - 主轴对齐方式
+/// @param {String} $align - 交叉轴对齐方式
+/// @param {String} $wrap - 是否换行
+/// @example scss - 使用示例
+///   .container {
+///     @include flex-layout(row, space-between, center);
+///   }
+@mixin flex-layout($direction: row, $justify: flex-start, $align: stretch, $wrap: nowrap) {
+  display: flex;
+  flex-direction: $direction;
+  flex-wrap: $wrap;
+  justify-content: $justify;
+  align-items: $align;
+}
+
+/// 绝对定位居中
+/// @example scss - 使用示例
+///   .modal {
+///     @include absolute-center;
+///   }
+@mixin absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/// 填满父容器
+/// @example scss - 使用示例
+///   .overlay {
+///     @include fill-parent;
+///   }
+@mixin fill-parent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/// Grid 布局
+/// @param {String} $columns - 列定义
+/// @param {String} $rows - 行定义
+/// @param {String} $gap - 间距
+/// @example scss - 使用示例
+///   .grid {
+///     @include grid-layout("repeat(3, 1fr)", "auto", "1rem");
+///   }
+@mixin grid-layout($columns: "1fr", $rows: "auto", $gap: "0") {
+  display: grid;
+  grid-template-rows: #{$rows};
+  grid-template-columns: #{$columns};
+  gap: #{$gap};
+}
+
+// ============================================================================
+// 视觉效果 Mixins
+// ============================================================================
+
+/// 圆角
+/// @param {String} $size - 圆角大小 (sm, md, lg) 或具体值
+/// @example scss - 使用示例
+///   .card {
+///     @include border-radius("md");
+///   }
+@mixin border-radius($size: "md") {
+  @if $size == "sm" or $size == "md" or $size == "lg" {
+    border-radius: fn.get-radius($size);
+  } @else {
+    border-radius: $size;
+  }
+}
+
+/// 阴影
+/// @param {String} $size - 阴影大小 (xs, sm, md, lg, xl) 或具体值
+/// @example scss - 使用示例
+///   .card {
+///     @include box-shadow("md");
+///   }
+@mixin box-shadow($size: "md") {
+  @if $size == "xs" or $size == "sm" or $size == "md" or $size == "lg" or $size == "xl" {
+    box-shadow: fn.get-shadow($size);
+  } @else {
+    box-shadow: $size;
+  }
+}
+
+/// 边框样式
+/// @param {String} $width - 边框宽度
+/// @param {String} $style - 边框样式
+/// @param {String} $color-variant - 边框颜色变体
+/// @example scss - 使用示例
+///   .input {
+///     @include border("1px", "solid", "default");
+///   }
+@mixin border($width: "1px", $style: "solid", $color-variant: "default") {
+  border: fn.get-border-style($width, $style, $color-variant);
+}
+
+/// 渐变背景
+/// @param {String} $direction - 渐变方向
+/// @param {List} $colors - 颜色列表
+/// @example scss - 使用示例
+///   .gradient {
+///     @include gradient-background("to right", (#ff0000, #00ff00));
+///   }
+@mixin gradient-background($direction: "to bottom", $colors...) {
+  background: linear-gradient(#{$direction}, $colors);
+}
+
+// ============================================================================
+// 交互效果 Mixins
+// ============================================================================
+
+/// 悬停效果
+/// @param {String} $property - 变化的属性
+/// @param {String} $duration - 动画时长
+/// @param {String} $timing - 动画曲线
+/// @example scss - 使用示例
+///   .button {
+///     @include hover-effect(transform, 0.2s, ease);
+///     &:hover {
+///       transform: translateY(-2px);
+///     }
+///   }
+@mixin hover-effect($property: all, $duration: 0.3s, $timing: ease) {
+  transition: $property $duration $timing;
+  cursor: pointer;
+}
+
+/// 焦点样式
+/// @param {String} $color - 焦点颜色，默认使用主题色
+/// @example scss - 使用示例
+///   .input {
+///     @include focus-style;
+///   }
+@mixin focus-style($color: null) {
+  &:focus {
+    outline: none;
+    @if $color {
+      box-shadow: 0 0 0 2px $color;
+    } @else {
+      box-shadow: fn.get-shadow("focus");
+    }
+  }
+}
+
+/// 禁用状态
+/// @example scss - 使用示例
+///   .button {
+///     @include disabled-state;
+///   }
+@mixin disabled-state {
+  &:disabled,
+  &[disabled],
+  &.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+// ============================================================================
+// 响应式 Mixins
+// ============================================================================
+
+/// 媒体查询断点
+$breakpoints: (
+  xs: 480px,
+  sm: 640px,
+  md: 768px,
+  lg: 1024px,
+  xl: 1280px,
+  2xl: 1536px,
+);
+
+/// 响应式媒体查询
+/// @param {String} $breakpoint - 断点名称
+/// @param {String} $type - 查询类型 (min, max)
+/// @example scss - 使用示例
+///   .container {
+///     @include media-query("md") {
+///       padding: 2rem;
+///     }
+///   }
+@mixin media-query($breakpoint, $type: min) {
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
+    @if $type == min {
+      @media (min-width: $value) {
+        @content;
+      }
+    } @else if $type == max {
+      @media (max-width: ($value - 1px)) {
+        @content;
+      }
+    }
+  } @else {
+    @error "断点 '#{$breakpoint}' 不存在。可用断点: #{map.keys($breakpoints)}";
+  }
+}
+
+/// 移动端优先的响应式
+/// @param {String} $breakpoint - 断点名称
+/// @example scss - 使用示例
+///   .text {
+///     font-size: 1rem;
+///     @include mobile-up("md") {
+///       font-size: 1.2rem;
+///     }
+///   }
+@mixin mobile-up($breakpoint) {
+  @include media-query($breakpoint, min) {
+    @content;
+  }
+}
+
+/// 桌面端优先的响应式
+/// @param {String} $breakpoint - 断点名称
+/// @example scss - 使用示例
+///   .sidebar {
+///     display: block;
+///     @include desktop-down("md") {
+///       display: none;
+///     }
+///   }
+@mixin desktop-down($breakpoint) {
+  @include media-query($breakpoint, max) {
+    @content;
+  }
+}
+
+$themes: (
+  light: "light",
+  dark: "dark",
+);
+
+/// 系统主题颜色响应式
+/// @param {String} $theme-name - 主题名称 (light, dark)
+/// @example scss - 使用示例
+/// &:where(.dark) {
+///   @include theme-color("dark") {
+///     color: white;
+///   };
+/// }
+@mixin theme-color($theme-name) {
+  @if map.has-key($themes, $theme-name) {
+    &:where(:global(.#{$theme-name}), :global(.#{$theme-name}) *) {
+      @content;
+    }
+  } @else {
+    @error "主题 '#{$theme-name}' 不存在。可用主题: #{map.keys($themes)}";
+  }
+}
+
+// ============================================================================
+// 工具 Mixins
+// ============================================================================
+
+/// 清除浮动
+/// @example scss - 使用示例
+///   .clearfix {
+///     @include clearfix;
+///   }
+@mixin clearfix {
+  &::after {
+    display: table;
+    clear: both;
+    content: "";
+  }
+}
+
+/// 隐藏元素但保持可访问性
+/// @example scss - 使用示例
+///   .sr-only {
+///     @include visually-hidden;
+///   }
+@mixin visually-hidden {
+  position: absolute;
+  margin: -1px;
+  padding: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+
+/// 重置按钮样式
+/// @example scss - 使用示例
+///   .custom-button {
+///     @include reset-button;
+///   }
+@mixin reset-button {
+  cursor: pointer;
+  margin: 0;
+  outline: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+/// 重置列表样式
+/// @example scss - 使用示例
+///   .custom-list {
+///     @include reset-list;
+///   }
+@mixin reset-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/// 硬件加速
+/// @example scss - 使用示例
+///   .animated {
+///     @include hardware-acceleration;
+///   }
+@mixin hardware-acceleration {
+  transform: translateZ(0);
+  perspective: 1000px;
+  backface-visibility: hidden;
+}

@@ -1,0 +1,175 @@
+@use "../variables/functions" as fn;
+@use "../variables/mixins" as mx;
+@use "../variables/variables" as *;
+
+$max-height: min(220px, 24vh);
+
+.cm-editor {
+  & .cm-tooltip {
+    &.cm-tooltip {
+      border: none;
+      &-autocomplete {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        z-index: var(--z-index-tooltip);
+        box-shadow: var(--shadow-menu);
+        border-radius: fn.get-radius("lg");
+        background-color: fn.get-background("default");
+        padding: 0;
+        min-width: 320px;
+        max-height: 300px;
+        overflow: hidden;
+        font-size: fn.get-text-size("md");
+        font-family: var(--font-sans);
+        & > ul {
+          margin: 0;
+          padding: 0;
+          min-width: 200px;
+          max-width: 240px;
+          height: $max-height;
+          max-height: $max-height;
+          overflow-y: auto;
+          list-style: none;
+          & > li {
+            @include mx.text-ellipsis();
+            cursor: default;
+            margin: 0;
+            border-bottom: none;
+            padding: 0 0.5rem;
+            height: 1.5rem;
+            scroll-margin: 40px;
+            scroll-padding: 40px;
+            font-size: fn.get-text-size("md");
+            line-height: 1.5rem;
+            &[role="option"] {
+              &:hover {
+                background-color: fn.get-background("secondary");
+              }
+            }
+            &[aria-selected] {
+              background-color: fn.get-background("selected");
+              color: fn.get-foreground("accent");
+            }
+            .cm-completionLabel {
+              flex: 1;
+            }
+            .cm-completionDetail {
+              margin-left: 0;
+              color: fn.get-foreground("secondary");
+              font-style: normal;
+            }
+            .cm-section-title {
+              color: fn.get-foreground("secondary");
+              @include mx.text-ellipsis();
+            }
+          }
+        }
+      }
+      &-expression-info {
+        z-index: var(--z-index-tooltip);
+        box-shadow: var(--shadow-menu);
+        border: 1px solid fn.get-border("default");
+        border-radius: fn.get-radius("md");
+        background-color: fn.get-background("default");
+        padding: 0.5rem;
+        max-width: 240px;
+      }
+    }
+    & .cm-cursorInfo,
+    &.cm-cursorInfo {
+      & .autocomplete-info-container {
+        box-shadow: var(--shadow-menu);
+        border-radius: fn.get-radius("lg");
+        background-color: fn.get-background("secondary");
+        padding: 0.5rem;
+        min-width: 320px;
+        max-width: 400px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+    }
+    &.cm-completionInfo {
+      position: relative;
+      top: 0 !important;
+      right: 0;
+      left: 0;
+      border-top: none;
+      border-right: none;
+      border-bottom: none;
+      border-left: 1px solid fn.get-border("default");
+      background-color: fn.get-background("secondary");
+      padding: 0.5rem;
+      width: 280px;
+      max-width: 280px !important;
+      height: 100%;
+      max-height: $max-height;
+      overflow-y: auto;
+      font-family: var(--font-sans);
+    }
+    & .autocomplete-info {
+      &-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      &-header {
+        color: fn.get-foreground("secondary");
+      }
+      &-name {
+        margin-right: 0.25rem;
+        color: fn.get-foreground("accent");
+        font-weight: fn.get-text-weight("medium");
+      }
+      &-description {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      &-examples-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      &-example {
+        border: 1px solid fn.get-border("default");
+        border-radius: fn.get-radius("md");
+        background-color: fn.get-background("default");
+        padding: 0.5rem;
+        font-family: var(--font-mono);
+        code {
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+      }
+      &-section-title {
+        margin-bottom: 0.25rem;
+        color: fn.get-foreground("accent");
+        font-weight: fn.get-text-weight("medium");
+      }
+      &-args {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding-left: 0.75rem;
+        & li {
+          list-style: disc;
+          word-break: break-all;
+        }
+        & .autocomplete-info-args {
+          margin-top: 0.5rem;
+        }
+      }
+      &-arg-name {
+        color: fn.get-foreground("secondary");
+      }
+      &-example-comment {
+        color: fn.get-foreground("secondary");
+        font-style: italic;
+      }
+    }
+    & .cm-completionMatchedText {
+      color: fn.get-foreground("accent");
+      text-decoration: none;
+    }
+  }
+}

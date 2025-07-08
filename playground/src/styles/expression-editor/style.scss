@@ -1,0 +1,459 @@
+@use "../variables/functions" as fn;
+@use "../variables/mixins" as mx;
+@use "../variables/variables" as *;
+
+@use "./autocomplete.scss";
+@use "./editor.scss";
+@use "./result-panel.scss";
+
+/**
+ * 表达式编辑器 SCSS 样式
+ * 
+ * 功能：
+ * - 主题变量定义
+ * - CodeMirror 自定义样式
+ * - n8n 风格的表达式语法高亮
+ * - 响应式设计支持
+ */
+
+// ===== 主题变量 =====
+
+// 亮色主题变量
+:root {
+  // 编辑器基础颜色
+  --expression-editor-bg: #ffffff;
+  --expression-editor-fg: #24292e;
+  --expression-editor-border: #e2e8f0;
+  --expression-editor-border-focus: #3b82f6;
+  --expression-editor-caret: #24292e;
+
+  // 语法高亮颜色
+  --syntax-string: #032f62;
+  --syntax-number: #005cc5;
+  --syntax-keyword: #d73a49;
+  --syntax-function: #6f42c1;
+  --syntax-comment: #6a737d;
+  --syntax-boolean: #005cc5;
+  --syntax-null: #005cc5;
+  --syntax-property: #6f42c1;
+  --syntax-operator: #24292e;
+
+  // n8n 表达式颜色
+  --expression-template-delimiter: #005cc5;
+  --expression-template-bg: #f6f8fa;
+  --expression-workflow-variable: #22863a;
+  --expression-workflow-function: #d73a49;
+  --expression-node-reference: #6f42c1;
+
+  // UI 元素颜色
+  --ui-selection: #{#005cc5}20; // 20% 透明度
+  --ui-active-line: #f6f8fa;
+  --ui-matching-bracket: #f6f8fa;
+  --ui-placeholder: #{#24292e}60; // 60% 透明度
+}
+
+// 暗色主题变量
+[data-theme="dark"] {
+  // 编辑器基础颜色
+  --expression-editor-bg: #1e1e1e;
+  --expression-editor-fg: #d4d4d4;
+  --expression-editor-border: #3f3f46;
+  --expression-editor-border-focus: #3b82f6;
+  --expression-editor-caret: #d4d4d4;
+
+  // 语法高亮颜色
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-keyword: #569cd6;
+  --syntax-function: #dcdcaa;
+  --syntax-comment: #6a9955;
+  --syntax-boolean: #569cd6;
+  --syntax-null: #569cd6;
+  --syntax-property: #9cdcfe;
+  --syntax-operator: #d4d4d4;
+
+  // n8n 表达式颜色
+  --expression-template-delimiter: #569cd6;
+  --expression-template-bg: #264f78;
+  --expression-workflow-variable: #4ec9b0;
+  --expression-workflow-function: #c586c0;
+  --expression-node-reference: #dcdcaa;
+
+  // UI 元素颜色
+  --ui-selection: #{#569cd6}20;
+  --ui-active-line: #2d2d30;
+  --ui-matching-bracket: #264f78;
+  --ui-placeholder: #{#d4d4d4}60;
+}
+
+// ===== SCSS 混入 =====
+
+// 基础编辑器样式混入
+@mixin base-editor-styles {
+  border: 1px solid var(--expression-editor-border);
+  border-radius: 6px;
+  background-color: var(--expression-editor-bg);
+  color: var(--expression-editor-fg);
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  &:focus-within {
+    outline: none;
+    border-color: var(--expression-editor-border-focus);
+  }
+}
+
+// 语法高亮混入
+@mixin syntax-highlighting {
+  .cm-string {
+    color: var(--syntax-string);
+  }
+
+  .cm-number {
+    color: var(--syntax-number);
+  }
+
+  .cm-keyword {
+    color: var(--syntax-keyword);
+    font-weight: 600;
+  }
+
+  .cm-function {
+    color: var(--syntax-function);
+    font-weight: 600;
+  }
+
+  .cm-comment {
+    color: var(--syntax-comment);
+    font-style: italic;
+  }
+
+  .cm-bool {
+    color: var(--syntax-boolean);
+    font-weight: 600;
+  }
+
+  .cm-null {
+    color: var(--syntax-null);
+    font-weight: 600;
+  }
+
+  .cm-property {
+    color: var(--syntax-property);
+  }
+
+  .cm-operator {
+    color: var(--syntax-operator);
+  }
+}
+
+// n8n 表达式样式混入
+@mixin expression-highlighting {
+  .cm-template-delimiter {
+    border-radius: 2px;
+    background-color: var(--expression-template-bg);
+    padding: 1px 2px;
+    color: var(--expression-template-delimiter);
+    font-weight: bold;
+  }
+
+  .cm-workflow-variable {
+    color: var(--expression-workflow-variable);
+    font-weight: 600;
+  }
+
+  .cm-workflow-function {
+    color: var(--expression-workflow-function);
+    font-weight: 600;
+  }
+
+  .cm-node-reference {
+    color: var(--expression-node-reference);
+    font-style: italic;
+  }
+}
+
+// ===== 主要样式 =====
+
+// 基础表达式编辑器类
+.expression-editor {
+  @include base-editor-styles;
+
+  // CodeMirror 内容区域
+  .cm-content {
+    padding: 12px;
+    min-height: 40px;
+    caret-color: var(--expression-editor-caret);
+  }
+
+  // 焦点状态
+  .cm-focused {
+    outline: none;
+  }
+
+  // 光标
+  .cm-cursor {
+    border-left-color: var(--expression-editor-caret);
+  }
+
+  // 占位符
+  .cm-placeholder {
+    color: var(--ui-placeholder);
+    font-style: italic;
+  }
+
+  // 选择高亮
+  .cm-selectionBackground {
+    background-color: var(--ui-selection);
+  }
+
+  // 活动行
+  .cm-activeLine {
+    background-color: var(--ui-active-line);
+  }
+
+  // 括号匹配
+  .cm-matchingBracket {
+    outline: 1px solid var(--expression-template-delimiter);
+    background-color: var(--ui-matching-bracket);
+  }
+
+  // 应用语法高亮
+  @include syntax-highlighting;
+  @include expression-highlighting;
+}
+
+// ===== 紧凑模式 =====
+
+.expression-editor--compact {
+  @extend .expression-editor;
+
+  font-size: 13px;
+
+  .cm-content {
+    padding: 8px 12px;
+    min-height: 32px;
+  }
+}
+
+// ===== 扩展模式 =====
+
+.expression-editor--expanded {
+  @extend .expression-editor;
+
+  .cm-content {
+    padding: 16px;
+    min-height: 120px;
+  }
+}
+
+// ===== 只读模式 =====
+
+.expression-editor--readonly {
+  @extend .expression-editor;
+  border-style: dashed;
+
+  background-color: color-mix(in srgb, var(--expression-editor-bg) 95%, transparent);
+
+  .cm-content {
+    color: color-mix(in srgb, var(--expression-editor-fg) 70%, transparent);
+  }
+}
+
+// ===== 错误状态 =====
+
+.expression-editor--error {
+  @extend .expression-editor;
+
+  border-color: #dc2626;
+
+  &:focus-within {
+    box-shadow: 0 0 0 1px #dc2626;
+    border-color: #dc2626;
+  }
+}
+
+// ===== 成功状态 =====
+
+.expression-editor--success {
+  @extend .expression-editor;
+
+  border-color: #16a34a;
+
+  &:focus-within {
+    box-shadow: 0 0 0 1px #16a34a;
+    border-color: #16a34a;
+  }
+}
+
+// ===== 工具栏样式 =====
+
+.expression-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--expression-editor-border);
+  background-color: color-mix(
+    in srgb,
+    var(--expression-editor-bg) 98%,
+    var(--expression-editor-border)
+  );
+  padding: 8px 12px;
+
+  .toolbar-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    padding: 4px 8px;
+    color: var(--expression-editor-fg);
+    font-size: 12px;
+
+    &:hover {
+      border-color: var(--expression-editor-border);
+      background-color: var(--ui-active-line);
+    }
+
+    &:active {
+      background-color: var(--ui-selection);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .toolbar-separator {
+    margin: 0 4px;
+    background-color: var(--expression-editor-border);
+    width: 1px;
+    height: 16px;
+  }
+}
+
+// ===== 结果面板样式 =====
+
+.expression-result-panel {
+  border: 1px solid var(--expression-editor-border);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  background-color: var(--expression-editor-bg);
+  padding: 12px;
+  font-size: 13px;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  .result-label {
+    margin-bottom: 4px;
+    color: color-mix(in srgb, var(--expression-editor-fg) 70%, transparent);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .result-value {
+    color: var(--syntax-string);
+    font-weight: 500;
+  }
+
+  .result-error {
+    color: #dc2626;
+    font-weight: 500;
+  }
+
+  .result-empty {
+    color: color-mix(in srgb, var(--expression-editor-fg) 50%, transparent);
+    font-style: italic;
+  }
+}
+
+// ===== 响应式设计 =====
+
+@media (max-width: 768px) {
+  .expression-editor {
+    .cm-content {
+      padding: 8px;
+    }
+  }
+
+  .expression-editor-toolbar {
+    padding: 6px 8px;
+
+    .toolbar-button {
+      padding: 3px 6px;
+      font-size: 11px;
+    }
+  }
+}
+
+// ===== 动画 =====
+
+@keyframes fade-in {
+  from {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.expression-result-panel {
+  animation: fade-in 0.15s ease-out;
+}
+
+// ===== 自定义滚动条 =====
+
+.expression-editor {
+  .cm-scroller {
+    scrollbar-color: var(--expression-editor-border) transparent;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 3px;
+      background-color: var(--expression-editor-border);
+
+      &:hover {
+        background-color: color-mix(
+          in srgb,
+          var(--expression-editor-border) 80%,
+          var(--expression-editor-fg)
+        );
+      }
+    }
+  }
+}
+
+// ===== 打印样式 =====
+
+@media print {
+  .expression-editor {
+    border: 1px solid #000;
+    background: #fff !important;
+    color: #000 !important;
+
+    .cm-content {
+      color: #000 !important;
+    }
+
+    .expression-editor-toolbar,
+    .expression-result-panel {
+      display: none;
+    }
+  }
+}

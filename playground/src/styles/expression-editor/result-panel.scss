@@ -1,0 +1,14 @@
+@use "../variables/functions" as fn;
+@use "../variables/mixins" as mx;
+@use "../variables/variables" as *;
+
+.cm-result-panel {
+  padding: 0;
+  width: 100%;
+  max-height: 95px;
+  font-size: fn.get-text-size("md");
+  line-height: fn.get-leading("md");
+  & .cm-content {
+    padding-left: 0;
+  }
+}
